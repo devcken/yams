@@ -1,4 +1,5 @@
-package yams.helper
+package yams
+package helper
 
 import org.scalatest.FreeSpec
 
@@ -16,7 +17,6 @@ class YamsSpec extends FreeSpec with ExampleReader
   */
 trait ExampleReader {
   def readAll(p: String): String = io.Source.fromResource(p).getLines().mkString("\n")
-
-  def readLine(p: String, l: Int): String = io.Source.fromResource(p).getLines.toList(l)
-  def readLines(p: String, r: Range): String = io.Source.fromResource(p).getLines().slice(r.start, r.end + 1).mkString("\n")
+  def readLine(p: String, l: Int): String = io.Source.fromResource(p).lines(l)
+  def readLines(p: String, r: Range): String = io.Source.fromResource(p).lines.slice(r.start, r.end + 1).mkString
 }

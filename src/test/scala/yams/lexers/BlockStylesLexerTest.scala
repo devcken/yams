@@ -21,47 +21,69 @@ class BlockStylesLexerTest extends yams.helper.YamsSpec {
         }
         
         "ex 8.2. Block Indentation Indicator" in {
+          val exampleYamlPath = "example/ch8_block-styles/ex8.2_block-indentation-indicator.yml"
+
           /*
-           - |°
-           ·detected
-           - >°
-           ·
-           ··
-           ··# detected
-           - |1
-           ··explicit
-           - >°
-           ·→
-           ·detected
-         */
+            - |°
+            ·detected
+            - >°
+            ·
+            ··
+            ··# detected
+            - |1
+            ··explicit
+            - >°
+            ·→
+            ·detected
+          */
 
-          val x1 = readLine("example/ch8_block-styles/ex8.2_block-indentation-indicator.yml", 0)
+          List((0, None, "- |"), (2, None, "- >"), (6, Some(1), "- |"), (8, None, "- >"))
+            .foreach{
+              case (line, expected, prefix) =>
+                assertResult(Right(expected))(IndentationIndicatorTestLexer(readLine(exampleYamlPath, line), prefix))
+            }
+        }
+      }
 
-          val expected1 = Right(None)
-          val actual1 = IndentationIndicatorTestLexer(x1, "- |")
+      "8.1.1.2. Block Chomping Indicator" - {
+        object ChompingIndicatorTestLexer extends BlockStylesLexer {
+          def apply(x: String, s: String): Either[YamlLoadError, ChompingMethod] = {
+            parse(s ~> chompingIndicator, x) match {
+              case NoSuccess(m, next) => Left(YamlLoadError(next.pos, m))
+              case Success(y, _) => Right(y)
+            }
+          }
+        }
 
-          assertResult(expected1)(actual1)
+        object ChompedLastTestLexer extends BlockStylesLexer {
+          def apply(x: String, t: ChompingMethod): Either[YamlLoadError, String] = {
+            parse("  text" ~> chompedLast(t), x) match {
+              case NoSuccess(m, next) => Left(YamlLoadError(next.pos, m))
+              case Success(y, _) => Right(y)
+            }
+          }
+        }
 
-          val x2 = readLine("example/ch8_block-styles/ex8.2_block-indentation-indicator.yml", 2)
+        "ex 8.4. Chomping Final Line Break" in {
+          val exampleYamlPath = "example/ch8_block-styles/ex8.4_chomping-final-line-break.yml"
 
-          val expected2 = Right(None)
-          val actual2 = IndentationIndicatorTestLexer(x2, "- >")
+          /*
+             strip: |-
+               text↓
+             clip: |
+               text↓
+             keep: |+
+               text↓
+           */
 
-          assertResult(expected2)(actual2)
-
-          val x3 = readLine("example/ch8_block-styles/ex8.2_block-indentation-indicator.yml", 6)
-
-          val expected3 = Right(Some(1))
-          val actual3 = IndentationIndicatorTestLexer(x3, "- |")
-
-          assertResult(expected3)(actual3)
-
-          val x4 = readLine("example/ch8_block-styles/ex8.2_block-indentation-indicator.yml", 8)
-
-          val expected4 = Right(None)
-          val actual4 = IndentationIndicatorTestLexer(x4, "- >")
-
-          assertResult(expected4)(actual4)
+          List((0, Strip, "strip: |", ""), (3, Clip, "clip: |", "\\n"), (6, Keep, "keep: |", "\\n"))
+            .foreach{
+              case (line, expected, prefix, expected2) =>
+                val chompingMethod = ChompingIndicatorTestLexer(readLine(exampleYamlPath, line), prefix)
+                assertResult(Right(expected))(chompingMethod)
+                val chomped = ChompedLastTestLexer(readLines(exampleYamlPath, line + 1 to line + 2), chompingMethod.right.get)
+                assertResult(Right(expected2))(chomped)
+            }
         }
       }
     }
