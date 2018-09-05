@@ -39,7 +39,7 @@ trait IndentationSpacesLexer extends scala.util.parsing.combinator.RegexParsers
     */
   def indentLt(n: Int): Parser[Int] = n match {
     case x if x <= 0 => throw new Exception() // TODO definition of exception
-    case _ => s"$Space{0,${n - 1}}".r ^^ { _.length }
+    case _ => s"[$Space]*".r ^^ { case space if space.length < n => space.length }
   }
 
   /** A block style construct is terminated when encountering a line which is less indented than the construct.
@@ -54,6 +54,6 @@ trait IndentationSpacesLexer extends scala.util.parsing.combinator.RegexParsers
     */
   def indentLte(n: Int): Parser[Int] = n match {
     case x if x <= 0 => throw new Exception() // TODO definition of exception
-    case _ => s"$Space{0,$n}".r ^^ { _.length }
+    case _ => s"[$Space]*".r ^^ { case space if space.length <= n => space.length }
   }
 }
