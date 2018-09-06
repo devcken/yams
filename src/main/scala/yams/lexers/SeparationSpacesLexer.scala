@@ -9,7 +9,10 @@ package lexers
   */
 trait SeparationSpacesLexer extends scala.util.parsing.combinator.RegexParsers
                                with yams.characters.WhiteSpace
-                               with yams.characters.LineBreak {
+                               with yams.characters.LineBreak
+                               with StartOfLineLexer {
+  override def skipWhitespace: Boolean = false
+
   /** Outside indentation and scalar content, YAML uses white space characters for separation between
     * tokens within a line. Note that such white space may safely include tab characters.
     * 
@@ -20,5 +23,10 @@ trait SeparationSpacesLexer extends scala.util.parsing.combinator.RegexParsers
     * @return [[Parser]] for lexing '''s-separate-in-line'''   
     * @see [[http://yaml.org/spec/1.2/spec.html#s-separate-in-line]]
     */
-  private[lexers] def separateInLine: Parser[Option[Nothing]] = s"(?:[$White]+|^)".r ^^ { _ => None }
+  private[lexers] def separateInLine: Parser[Option[Nothing]] = Parser { input =>
+    parse(s"[$White]+".r | startOfLine, input) match {
+      case NoSuccess(_, _) => Failure("s-separate-in-line expected, but not found", input)
+      case Success(_, next) => Success(None, next)
+    }
+  }
 }

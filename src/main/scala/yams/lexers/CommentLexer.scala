@@ -68,7 +68,7 @@ trait CommentLexer extends util.parsing.combinator.RegexParsers
     * @note [[commentBreak]] means just a break or end-of-file.
     */
   private[lexers] def optComment: Parser[Option[Nothing]] =
-    opt(separateInLine ~ opt(commentText)) <~ commentBreak ^^ { _ => None }
+    (separateInLine ~ commentText.?).? <~ commentBreak ^^ { _ => None }
 
   /** Outside scalar content, comments may appear on a line of their own, independent of the indentation
     * level. Note that outside scalar content, a line containing only white space characters is taken to
@@ -97,11 +97,10 @@ trait CommentLexer extends util.parsing.combinator.RegexParsers
     * @return [[Parser]] for lexing s-l-comments
     * @see [[http://yaml.org/spec/1.2/spec.html#s-l-comments]]
     */
-  protected[lexers] def comments: Parser[Option[Nothing]] = {
-    (optComment | "^".r) ~
-      repsep(Parser { input =>
-        if (input.atEnd) Failure("reached at end", input)
-        else Success(None, input)
-      }, comment) ^^ { x => None }
+  protected[lexers] def comments: Parser[Option[Nothing]] = Parser { input =>
+    parse((optComment | startOfLine) ~ comment.*, input) match {
+      case NoSuccess(_, _) => Failure("s-l-comments", input)
+      case Success(_, next) => Success(None, next)
+    }
   }
 }
