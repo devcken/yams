@@ -85,6 +85,71 @@ class BlockStylesLexerTest extends yams.helper.YamsSpec {
                 assertResult(Right(expected2))(chomped)
             }
         }
+
+        object ChompedEmptyTestLexer extends BlockStylesLexer {
+          def apply(x: String, n: Int, t: ChompingMethod): Either[YamlLoadError, Option[String]] = {
+            parse(chompedEmpty(n, t), x) match {
+              case NoSuccess(m, next) => Left(YamlLoadError(next.pos, m))
+              case Success(y, _) => Right(y)
+            }
+          }
+        }
+
+        "ex 8.5. Chomping Trailing Lines" in {
+          val exampleYamlPath = "example/ch8_block-styles/ex8.5_chomping-trailing-lines.yml"
+
+          /*
+               # Strip
+                # Comments:
+              strip: |-
+                # text↓
+              ··⇓
+              ·# Clip
+              ··# comments:
+              ↓
+              clip: |
+                # text↓
+              ·↓
+              ·# Keep
+              ··# comments:
+              ↓
+              keep: |+
+                # text↓
+              ↓
+              ·# Trail
+              ··# comments.
+           */
+
+          List((2, Strip, "strip: |"), (9, Clip, "clip: |"), (16, Keep, "keep: |"))
+            .foreach{ case (line, expected1, prefix) =>
+              val actual1 = ChompingIndicatorTestLexer(readLine(exampleYamlPath, line), prefix)
+              assertResult(Right(expected1))(actual1)
+
+              val expected2 = Right(None)
+              val actual2 = ChompedEmptyTestLexer(readLines(exampleYamlPath, line + 2 to line + 5), 2, actual1.right.get)
+              assertResult(expected2)(actual2)
+            }
+        }
+
+        "ex 8.6. Empty Scalar Chomping" in {
+          val exampleYamlPath = "example/ch8_block-styles/ex8.6_empty-scalar-chomping.yml"
+
+          /*
+             strip: >-
+             ↓
+             clip: >
+             ↓
+             keep: |+
+             ↓
+           */
+
+          List((0, Strip, "strip: >", ""), (3, Clip, "clip: >", ""), (6, Keep, "keep: |", "\n"))
+            .foreach{ case (line, expected, prefix, expected2) =>
+              val chompingMethod = ChompingIndicatorTestLexer(readLine(exampleYamlPath, line), prefix)
+              assertResult(Right(expected))(chompingMethod)
+              assertResult(Right(Some(expected2)))(ChompedEmptyTestLexer(readLines(exampleYamlPath, line + 1 to line + 2), 2, chompingMethod.right.get))
+            }
+        }
       }
     }
   }

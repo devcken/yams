@@ -16,9 +16,10 @@ object Keep extends ChompingMethod
   */
 trait BlockStylesLexer extends scala.util.parsing.combinator.RegexParsers
                           with characters.LineBreak
-                          with characters.MiscChar {
-  override def skipWhitespace: Boolean = false
-
+                          with characters.MiscChar
+                          with IndentationSpacesLexer
+                          with CommentLexer
+                          with EmptyLinesLexer {
   /** Typically, the indentation level of a block scalar is detected from its first non-empty line. It is
     * an error for any of the leading empty lines to contain more spaces than the first non-empty line.
     * 
@@ -104,5 +105,59 @@ trait BlockStylesLexer extends scala.util.parsing.combinator.RegexParsers
   private[lexers] def chompedLast(t: ChompingMethod): Parser[String] = t match {
     case Strip => (s"[$NonContent]".r | "$$".r) ^^ { _ => "" }
     case Clip | Keep => breakAsLineFeed | "$$".r
+  }
+
+  /** The interpretation of the trailing empty lines following a block scalar is also controlled by the
+    * chomping indicator specified in the block scalar header.
+    *
+    * {{{
+    *   [166] l-chomped-empty(n,t) ::= t = strip ⇒ l-strip-empty(n)
+    *                                  t = clip  ⇒ l-strip-empty(n)
+    *                                  t = keep  ⇒ l-keep-empty(n)
+    *   [167]     l-strip-empty(n) ::= ( s-indent(≤n) b-non-content )*
+    *                                  l-trail-comments(n)?
+    *   [168]      l-keep-empty(n) ::= l-empty(n,block-in)*
+    *                                  l-trail-comments(n)?
+    * }}}
+    *
+    * Explicit comment lines may follow the trailing empty lines. To prevent ambiguity, the first such
+    * comment line must be less indented than the block scalar content. Additional comment lines, if any,
+    * are not so restricted. This is the only case where the indentation of comment lines is constrained.
+    *
+    * {{{
+    *   [169] l-trail-comments(n) ::= s-indent(<n) c-nb-comment-text b-comment
+    *                                 l-comment*
+    * }}}
+    *
+    * If a block scalar consists only of empty lines, then these lines are considered as trailing lines
+    * and hence are affected by chomping.
+    *
+    * @param n a number of indentation spaces
+    * @param t [[Strip]], [[Keep]] or [[Clip]]
+    * @return [[Parser]] for lexing l-chomped-empty(n,t)
+    * @see [[http://yaml.org/spec/1.2/spec.html#l-trail-comments(n)]]
+    */
+  private[lexers] def chompedEmpty(n: Int, t: ChompingMethod): Parser[Option[String]] = {
+    def stripEmpty(n: Int): Parser[Option[String]] =
+      (indentLte(n) ~ s"[$NonContent]".r).* ~> trailComments(n).? ^^ {
+        case Some(x) if x.nonEmpty => None
+        case _ => Some("")
+      }
+
+    def keepEmpty(n: Int): Parser[Option[String]] =
+      emptyLine(n, BlockIn).* ~> trailComments(n).? ^^ {
+        case Some(x) if x.nonEmpty => None
+        case _ => Some("\n")
+      }
+
+    def trailComments(n: Int): Parser[String] =
+      indentLt(n) ~> (commentText <~ commentBreak) ~ comment.* ^^ {
+        case a ~ b => a + b.filter(p => p.nonEmpty).map(x => x.get).mkString
+      }
+
+    t match {
+      case Strip | Clip => stripEmpty(n)
+      case Keep => keepEmpty(n)
+    }
   }
 }

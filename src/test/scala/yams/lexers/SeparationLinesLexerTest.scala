@@ -10,12 +10,14 @@ class SeparationLinesLexerTest extends yams.helper.YamsSpec {
   import yams.YamlLoadError
   
   "ex 6.12. Separation Lines" - {
+    val exampleYamlPath = "example/ch6_basic-structures/ex6.12_separation-lines.yml"
+    
     "s-separate-in-line" in {
       object SeparateInLineTestLexer extends SeparationLinesLexer {
-        def apply(x: String): Either[YamlLoadError, String] = {
+        def apply(x: String): Either[YamlLoadError, Unit] = {
           parse("{" ~ separateInLine ~ "first:" ~ separateInLine ~ "Sammy," ~ separateInLine ~ "last:" ~ separateInLine ~ "Sosa" ~ separateInLine ~ "}:", x) match {
             case NoSuccess(m, next) => Left(YamlLoadError(next.pos, m))
-            case Success(_, _) => Right("Success")
+            case Success(_, _) => Right(Unit)
           }
         }
       }
@@ -24,38 +26,32 @@ class SeparationLinesLexerTest extends yams.helper.YamsSpec {
          {·first:·Sammy,·last:·Sosa·}:↓
        */
       
-      val x = readLine("example/ch6_basic-structures/ex6.12_separation-lines.yml", 0)
+      val x = readLine(exampleYamlPath, 0)
       
-      val expected = Right("Success")
-      val actual = SeparateInLineTestLexer(x)
-      
-      assertResult(expected)(actual)
+      assert(SeparateInLineTestLexer(x).isRight)
     }
 
     "s-separate-lines(n) short test" in {
       object SeparateLinesTestLexer extends SeparationLinesLexer {
-        def apply(x: String): Either[YamlLoadError, String] = {
+        def apply(x: String): Either[YamlLoadError, Unit] = {
           parse("hr:" ~ separateLines(3) ~ "65", x) match {
             case NoSuccess(m, next) => Left(YamlLoadError(next.pos, m))
-            case Success(_, _) => Right("Success")
+            case Success(_, _) => Right(Unit)
           }
         }
       }
 
       val x = "hr:  # Home runs\n     65"
 
-      val expected = Right("Success")
-      val actual = SeparateLinesTestLexer(x)
-
-      assertResult(expected)(actual)
+      assert(SeparateLinesTestLexer(x).isRight)
     }
     
     "s-separate-lines(n)" in {
       object SeparateLinesTestLexer extends SeparationLinesLexer {
-        def apply(x: String): Either[YamlLoadError, String] = {
+        def apply(x: String): Either[YamlLoadError, Unit] = {
           parse(separateLines(2) ~ "hr:" ~ separateLines(3) ~ "65\n" ~ indent(2) ~ "avg:" ~ separateLines(3) ~ "0.278", x) match {
             case NoSuccess(m, next) => Left(YamlLoadError(next.pos, m))
-            case Success(_, _) => Right("Success")
+            case Success(_, _) => Right(Unit)
           }
         }
       }
@@ -69,12 +65,9 @@ class SeparationLinesLexerTest extends yams.helper.YamsSpec {
          ···0.278
        */
       
-      val x = "\n" + readLines("example/ch6_basic-structures/ex6.12_separation-lines.yml", 1 to 5)
+      val x = "\n" + readLines(exampleYamlPath, 1 to 5)
       
-      val expected = Right("Success")
-      val actual = SeparateLinesTestLexer(x)
-      
-      assertResult(expected)(actual)
+      assert(SeparateLinesTestLexer(x).isRight)
     }
   }
 }
