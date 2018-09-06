@@ -16,7 +16,7 @@ class YamsSpec extends FreeSpec with ExampleReader
   * @since 0.1
   */
 trait ExampleReader {
-  def readAll(p: String): String = io.Source.fromResource(p).getLines().mkString("\n")
+  def readAll(p: String): String = io.Source.fromResource(p).lines.mkString
   def readLine(p: String, l: Int): String = io.Source.fromResource(p).lines(l)
   def readLines(p: String, r: Range): String = io.Source.fromResource(p).lines.slice(r.start, r.end + 1).mkString
 }

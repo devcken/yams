@@ -11,16 +11,48 @@ class BlockStylesLexerTest extends yams.helper.YamsSpec {
   "8.1. Block Scalar Styles" - {
     "8.1.1. Block Scalar Headers" - {
       "8.1.1.1. Block Indentation Indicator" - {
-        object IndentationIndicatorTestLexer extends BlockStylesLexer {
-          def apply(x: String, s: String): Either[YamlLoadError, Option[Int]] = {
-            parse(s ~> indentationIndicator, x) match {
-              case NoSuccess(m, next) => Left(YamlLoadError(next.pos, m))
-              case Success(y, _) => Right(y)
+        "ex 8.1. Block Scalar Header" in {
+          object BlockHeaderTestLexer extends BlockStylesLexer {
+            def apply(x: String, s: String): Either[YamlLoadError, (Int, ChompingMethod)] = {
+              parse(s ~> blockHeader, x) match {
+                case NoSuccess(m, next) => Left(YamlLoadError(next.pos, m))
+                case Success(y, _) => Right(y)
+              }
             }
           }
+          
+          val exampleYamlPath = "example/ch8_block-styles/ex8.1_block-scalar-header.yml"
+          
+          /*
+             - | # Empty header↓
+              literal
+             - >1 # Indentation indicator↓
+              ·folded
+             - |+ # Chomping indicator↓
+              keep
+             
+             - >1- # Both indicators↓
+              ·strip
+           */
+          
+          List((0, (0, Clip), "- |"), (2, (1, Clip), "- >"), (4, (0, Keep), "- |"), (7, (1, Strip), "- >"))
+            .foreach{
+              case (line, expected, prefix) =>
+                val actual = BlockHeaderTestLexer(readLine(exampleYamlPath, line), prefix)
+                assertResult(Right(expected))(actual)
+            }
         }
         
         "ex 8.2. Block Indentation Indicator" in {
+          object IndentationIndicatorTestLexer extends BlockStylesLexer {
+            def apply(x: String, s: String): Either[YamlLoadError, Option[Int]] = {
+              parse(s ~> indentationIndicator, x) match {
+                case NoSuccess(m, next) => Left(YamlLoadError(next.pos, m))
+                case Success(y, _) => Right(y)
+              }
+            }
+          }
+          
           val exampleYamlPath = "example/ch8_block-styles/ex8.2_block-indentation-indicator.yml"
 
           /*
@@ -150,6 +182,63 @@ class BlockStylesLexerTest extends yams.helper.YamsSpec {
               assertResult(Right(Some(expected2)))(ChompedEmptyTestLexer(readLines(exampleYamlPath, line + 1 to line + 2), 2, chompingMethod.right.get))
             }
         }
+      }
+    }
+    
+    "8.1.2. Literal Style" - {
+      "ex 8.7. Literal Scalar" in {
+        object LiteralTestLexer extends BlockStylesLexer {
+          def apply(x: String, n: Int): Either[YamlLoadError, String] = {
+            parse(literal(n), x) match {
+              case NoSuccess(m, next) => Left(YamlLoadError(next.pos, m))
+              case Success(y, _) => Right(y)
+            }
+          }
+        }
+        
+        val x = readAll("example/ch8_block-styles/ex8.7_literal-scalar.yml")
+        
+        /*
+           |↓
+           ·literal↓
+           ·→text↓
+           ↓
+         */
+        
+        val expected = Right("literal\\n\ttext\\n")
+        val actual = LiteralTestLexer(x, 1)
+        
+        assertResult(expected)(actual)
+      }
+      
+      "ex 8.8. Literal Content" in {
+        object LiteralContentTestLexer extends BlockStylesLexer {
+          def apply(x: String, n: Int, t: ChompingMethod): Either[YamlLoadError, String] = {
+            parse(literalContent(n, t), x) match {
+              case NoSuccess(m, next) => Left(YamlLoadError(next.pos, m))
+              case Success(y, _) => Right(y)
+            }
+          }
+        }
+
+        val x = readLines("example/ch8_block-styles/ex8.8_literal-content.yml", 1 to 8)
+
+        /*
+           |
+           ·
+           ··
+           ··literal↓
+           ···↓
+           ··
+           ··text↓
+           ↓
+           ·# Comment
+         */
+
+        val expected = Right("\\n\\nliteral\\n \\n\\ntext\\n")
+        val actual = LiteralContentTestLexer(x, 2, Clip)
+
+        assertResult(expected)(actual)
       }
     }
   }

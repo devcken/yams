@@ -20,6 +20,28 @@ trait BlockStylesLexer extends scala.util.parsing.combinator.RegexParsers
                           with IndentationSpacesLexer
                           with CommentLexer
                           with EmptyLinesLexer {
+  /** Block scalars are controlled by a few indicators given in a header preceding the content itself. 
+    * This header is followed by a non-content line break with an optional comment. This is the only case 
+    * where a comment must not be followed by additional comment lines.
+    * 
+    * {{{
+    *   [162] c-b-block-header(m,t) ::= ( ( c-indentation-indicator(m)
+    *                                       c-chomping-indicator(t) )
+    *                                   | ( c-chomping-indicator(t)
+    *                                       c-indentation-indicator(m) ) )
+    *                                   s-b-comment
+    * }}}
+    * 
+    * @return [[Parser]] for lexing '''c-b-block-header(m,t)'''
+    * @see [[http://yaml.org/spec/1.2/spec.html#c-b-block-header(m,t)]]
+    */
+  private[lexers] def blockHeader: Parser[(Int, ChompingMethod)] =
+    ((indentationIndicator ~ chompingIndicator) ^^ { case a ~ b => (a, b) } |
+      (chompingIndicator ~ indentationIndicator) ^^ { case b ~ a => (a, b) }) <~ optComment ^^ {
+      case (Some(m), t) => (m, t)
+      case (None, t) => (0, t)
+    }
+  
   /** Typically, the indentation level of a block scalar is detected from its first non-empty line. It is
     * an error for any of the leading empty lines to contain more spaces than the first non-empty line.
     * 
@@ -42,12 +64,8 @@ trait BlockStylesLexer extends scala.util.parsing.combinator.RegexParsers
     * @see [[http://yaml.org/spec/1.2/spec.html#c-indentation-indicator(m)]]
     */
   private[lexers] def indentationIndicator: Parser[Option[Int]] = Parser { input =>
-    parse("[\\x31-\\x39]".r, input) match {
-      case NoSuccess(_, next) =>
-        parse(s"[$Break]|$$".r, next) match {
-          case NoSuccess(m, _) => Failure(m, input)
-          case Success(_, _) => Success(None, next)
-        }
+    parse("[\\x31-\\x39]{1}".r, input) match {
+      case NoSuccess(_, _) => Success(None, input)
       case Success(y, next) => Success(Some(y.toInt), next)
     } 
   }
@@ -79,12 +97,11 @@ trait BlockStylesLexer extends scala.util.parsing.combinator.RegexParsers
     * @see [[http://yaml.org/spec/1.2/spec.html#c-chomping-indicator(t)]]
     */
   private[lexers] def chompingIndicator: Parser[ChompingMethod] = Parser { input =>
-    parse(s"\\x2D|\\x2B|[$Break]|($$)".r, input) match {
-      case NoSuccess(m, _) => Failure(m, input)
+    parse(s"[\\x2D\\x2B]{1}".r, input) match {
+      case NoSuccess(_, _) => Success(Clip, input)
       case Success(y, next) => y match {
         case "-" => Success(Strip, next)
         case "+" => Success(Keep, next)
-        case _ => Success(Clip, next)
       }
     }
   }
@@ -158,6 +175,65 @@ trait BlockStylesLexer extends scala.util.parsing.combinator.RegexParsers
     t match {
       case Strip | Clip => stripEmpty(n)
       case Keep => keepEmpty(n)
+    }
+  }
+
+  /** The literal style is denoted by the “|” indicator. It is the simplest, most restricted, and most 
+    * readable scalar style.
+    * 
+    * {{{
+    *   [170] c-l+literal(n) ::= “|” c-b-block-header(m,t)
+    *                            l-literal-content(n+m,t)
+    * }}}
+    * 
+    * @param n a number of indentation spaces
+    * @return [[Parser]] for '''c-l+literal(n)'''
+    * @see [[http://yaml.org/spec/1.2/spec.html#c-l+literal(n)]]
+    */
+  private[lexers] def literal(n: Int): Parser[String] = Parser { input =>
+    parse("|" ~> blockHeader, input) match {
+      case NoSuccess(_, _) => Failure("c-l+literal(n) expected, but not found", input)
+      case Success((m, t), next1) => parse(literalContent(n + m, t), next1) match {
+        case NoSuccess(msg, _) => Error(msg, next1)
+        case Success(y, next2) => Success(y, next2)
+      }
+    }
+  }
+
+  /** Inside literal scalars, all (indented) characters are considered to be content, including white 
+    * space characters. Note that all line break characters are normalized. In addition, empty lines are 
+    * not folded, though final line breaks and trailing empty lines are chomped.
+    * 
+    * There is no way to escape characters inside literal scalars. This restricts them to printable 
+    * characters. In addition, there is no way to break a long literal line.
+    * 
+    * {{{
+    *   [171]   l-nb-literal-text(n) ::= l-empty(n,block-in)*
+    *                                    s-indent(n) nb-char+
+    *   [172]   b-nb-literal-next(n) ::= b-as-line-feed
+    *                                    l-nb-literal-text(n)
+    *   [173] l-literal-content(n,t) ::= ( l-nb-literal-text(n) b-nb-literal-next(n)*
+    *                                      b-chomped-last(t) )?
+    *                                    l-chomped-empty(n,t)
+    * }}}
+    * 
+    * @param n a number of indentation spaces
+    * @param t [[Strip]], [[Keep]] or [[Clip]]
+    * @return [[Parser]] for lexing '''l-literal-content(n,t)'''
+    * @see [[http://yaml.org/spec/1.2/spec.html#l-literal-content(n,t)]]
+    */
+  private[lexers] def literalContent(n: Int, t: ChompingMethod): Parser[String] = {
+    def literalTextLines(n: Int): Parser[String] =
+      emptyLine(n, BlockIn).* ~ (indent(n) ~> s"$NoBreakChar+".r) ^^ { case a ~ b => a.mkString + b }
+
+    def literalTextLinesPrecedingBreak(n: Int): Parser[String] =
+      breakAsLineFeed ~ literalTextLines(n) ^^ { case a ~ b => a + b }
+    
+    (literalTextLines(n) ~ literalTextLinesPrecedingBreak(n).* ~ chompedLast(t)).? ~ chompedEmpty(n, t) ^^ {
+      case Some(a ~ b ~ c) ~ Some(d) => a + b.mkString + c + d
+      case Some(a ~ b ~ c) ~ None => a + b.mkString + c
+      case None ~ Some(d) => d
+      case None ~ None => ""
     }
   }
 }
