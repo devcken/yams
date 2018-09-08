@@ -241,5 +241,28 @@ class BlockStylesLexerTest extends yams.helper.YamsSpec {
         assertResult(expected)(actual)
       }
     }
+
+    "8.1.3. Folded Style" - {
+      "ex 8.10. Folded Lines" in {
+        object FoldedLinesTestLexer extends BlockStylesLexer {
+          def apply(x: String, n: Int): Either[YamlLoadError, String] = {
+            parse(foldedLines(n), x) match {
+              case NoSuccess(m, next) => Left(YamlLoadError(next.pos, m))
+              case Success(y, _) => Right(y)
+            }
+          }
+        }
+
+        val exampleYamlPath = "example/ch8_block-styles/ex8.10_folded-lines.yml"
+
+        List(
+          (2 to 6, "folded line\\nnext line"),
+          (12 to 13, "last line"),
+        ).foreach{ case (lines, expected) =>
+          val actual = FoldedLinesTestLexer(readLines(exampleYamlPath, lines), 1)
+          assertResult(Right(expected))(actual)
+        }
+      }
+    }
   }
 }

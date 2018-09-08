@@ -19,7 +19,8 @@ trait BlockStylesLexer extends scala.util.parsing.combinator.RegexParsers
                           with characters.MiscChar
                           with IndentationSpacesLexer
                           with CommentLexer
-                          with EmptyLinesLexer {
+                          with EmptyLinesLexer
+                          with LineFoldingLexer {
   /** Block scalars are controlled by a few indicators given in a header preceding the content itself. 
     * This header is followed by a non-content line break with an optional comment. This is the only case 
     * where a comment must not be followed by additional comment lines.
@@ -234,6 +235,27 @@ trait BlockStylesLexer extends scala.util.parsing.combinator.RegexParsers
       case Some(a ~ b ~ c) ~ None => a + b.mkString + c
       case None ~ Some(d) => d
       case None ~ None => ""
+    }
+  }
+
+  /** Folding allows long lines to be broken anywhere a single space character separates two non-space
+    * characters.
+    *
+    * {{{
+    *   [175]  s-nb-folded-text(n) ::= s-indent(n) ns-char nb-char*
+    *   [176] l-nb-folded-lines(n) ::= s-nb-folded-text(n)
+    *                                  ( b-l-folded(n,block-in) s-nb-folded-text(n) )*
+    * }}}
+    *
+    * @param n a number of indentation spaces
+    * @return [[Parser]] for lexing '''l-nb-folded-lines(n)'''
+    */
+  private[lexers] def foldedLines(n: Int): Parser[String] = {
+    def foldedText(n: Int): Parser[String] =
+      indent(n) ~> s"[$NoSpaceChar]".r ~ s"$NoBreakChar*".r ^^ { case a ~ b => a + b }
+
+    foldedText(n) ~ (folded(n, BlockIn) ~ foldedText(n)).* ^^ {
+      case a ~ b => a + b.map(c => c._1 + c._2).mkString
     }
   }
 }
