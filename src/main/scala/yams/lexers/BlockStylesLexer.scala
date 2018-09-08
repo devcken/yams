@@ -303,4 +303,23 @@ trait BlockStylesLexer extends scala.util.parsing.combinator.RegexParsers
 
     sameLines(n) ~ (breakAsLineFeed ~ sameLines(n)).* ^^ { case a ~ b => a + b.map(c => c._1 + c._2).mkString }
   }
+
+  /** The final line break, and trailing empty lines if any, are subject to chomping and are never folded.
+    *
+    * {{{
+    *   [182] l-folded-content(n,t) ::= ( l-nb-diff-lines(n) b-chomped-last(t) )?
+    *                                   l-chomped-empty(n,t)
+    * }}}
+    *
+    * @param n a number of indentation spaces
+    * @param t [[Strip]], [[Keep]] or [[Clip]]
+    * @return [[Parser]] for lexing ''''''
+    */
+  private[lexers] def foldedContent(n: Int, t: ChompingMethod): Parser[String] =
+    (diffLines(n) ~ chompedLast(t)).? ~ chompedEmpty(n, t) ^^ {
+      case Some(a ~ b) ~ Some(c) => a + b + c
+      case Some(a ~ b) ~ None => a + b
+      case None ~ Some(c) => c
+      case None ~ None => ""
+    }
 }

@@ -303,6 +303,26 @@ class BlockStylesLexerTest extends yams.helper.YamsSpec {
 
         assertResult(expected)(actual)
       }
+
+      "ex 8.13. Final Empty Lines" in {
+        object FoldedContent extends BlockStylesLexer {
+          def apply(x: String, n: Int, t: ChompingMethod): Either[YamlLoadError, String] = {
+            parse(foldedContent(n, t), x) match {
+              case NoSuccess(m, next) => Left(YamlLoadError(next.pos, m))
+              case Success(y, _) => Right(y)
+            }
+          }
+        }
+
+        val exampleYamlPath = "example/ch8_block-styles/ex8.10_folded-lines.yml"
+
+        val x = readLines(exampleYamlPath, 1 to 15)
+
+        val expected = Right("\\nfolded line\\nnext line\\n  * bullet\\n\\n  * list\\n  * lines\\n\\nlast line\\n")
+        val actual = FoldedContent(x, 1, Clip)
+
+        assertResult(expected)(actual)
+      }
     }
   }
 }
