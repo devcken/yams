@@ -283,4 +283,24 @@ trait BlockStylesLexer extends scala.util.parsing.combinator.RegexParsers
 
     spacedText(n) ~ (spaced(n) ~ spacedText(n)).* ^^ { case a ~ b => a + b.map(c => c._1 + c._2).mkString }
   }
+
+  /** Line breaks and empty lines separating folded and more-indented lines are also not folded.
+    *
+    * {{{
+    *   [180] l-nb-same-lines(n) ::= l-empty(n,block-in)*
+    *                                ( l-nb-folded-lines(n) | l-nb-spaced-lines(n) )
+    *   [181] l-nb-diff-lines(n) ::= l-nb-same-lines(n)
+    *                                ( b-as-line-feed l-nb-same-lines(n) )*
+    * }}}
+    *
+    * @param n a number of indentation spaces
+    * @return [[Parser]] for lexing '''l-nb-diff-lines(n)'''
+    * @see [[http://yaml.org/spec/1.2/spec.html#l-nb-diff-lines(n)]]
+    */
+  private[lexers] def diffLines(n: Int): Parser[String] = {
+    def sameLines(n: Int): Parser[String] =
+      emptyLine(n, BlockIn).* ~ (foldedLines(n) | spacedLines(n)) ^^ { case a ~ b => a.mkString + b }
+
+    sameLines(n) ~ (breakAsLineFeed ~ sameLines(n)).* ^^ { case a ~ b => a + b.map(c => c._1 + c._2).mkString }
+  }
 }

@@ -283,6 +283,26 @@ class BlockStylesLexerTest extends yams.helper.YamsSpec {
 
         assertResult(expected)(actual)
       }
+
+      "ex 8.12. Empty Separation Lines" in {
+        object DiffLineTestLexer extends BlockStylesLexer {
+          def apply(x: String, n: Int): Either[YamlLoadError, String] = {
+            parse(diffLines(n), x) match {
+              case NoSuccess(m, next) => Left(YamlLoadError(next.pos, m))
+              case Success(y, _) => Right(y)
+            }
+          }
+        }
+
+        val exampleYamlPath = "example/ch8_block-styles/ex8.10_folded-lines.yml"
+
+        val x = readLines(exampleYamlPath, 1 to 13)
+
+        val expected = Right("\\nfolded line\\nnext line\\n  * bullet\\n\\n  * list\\n  * lines\\n\\nlast line")
+        val actual = DiffLineTestLexer(x, 1)
+
+        assertResult(expected)(actual)
+      }
     }
   }
 }
