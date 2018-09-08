@@ -249,6 +249,7 @@ trait BlockStylesLexer extends scala.util.parsing.combinator.RegexParsers
     *
     * @param n a number of indentation spaces
     * @return [[Parser]] for lexing '''l-nb-folded-lines(n)'''
+    * @see [[http://yaml.org/spec/1.2/spec.html#l-nb-folded-lines(n)]]
     */
   private[lexers] def foldedLines(n: Int): Parser[String] = {
     def foldedText(n: Int): Parser[String] =
@@ -257,5 +258,29 @@ trait BlockStylesLexer extends scala.util.parsing.combinator.RegexParsers
     foldedText(n) ~ (folded(n, BlockIn) ~ foldedText(n)).* ^^ {
       case a ~ b => a + b.map(c => c._1 + c._2).mkString
     }
+  }
+
+  /** Lines starting with white space characters (more-indented lines) are not folded.
+    *
+    * {{{
+    *   [177]  s-nb-spaced-text(n) ::= s-indent(n) s-white nb-char*
+    *   [178]        b-l-spaced(n) ::= b-as-line-feed
+    *                                  l-empty(n,block-in)*
+    *   [179] l-nb-spaced-lines(n) ::= s-nb-spaced-text(n)
+    *                                  ( b-l-spaced(n) s-nb-spaced-text(n) )*
+    * }}}
+    *
+    * @param n a number of indentation spaces
+    * @return [[Parser]] for lexing '''l-nb-spaced-lines(n)'''
+    * @see [[http://yaml.org/spec/1.2/spec.html#l-nb-spaced-lines(n)]]
+    */
+  private[lexers] def spacedLines(n: Int): Parser[String] = {
+    def spacedText(n: Int): Parser[String] =
+      indent(n) ~> s"[$White]".r ~ s"$NoBreakChar*".r ^^ { case a ~ b => a + b }
+
+    def spaced(n: Int): Parser[String] =
+      breakAsLineFeed ~ emptyLine(n, BlockIn).* ^^ { case a ~ b => a + b.mkString }
+
+    spacedText(n) ~ (spaced(n) ~ spacedText(n)).* ^^ { case a ~ b => a + b.map(c => c._1 + c._2).mkString }
   }
 }

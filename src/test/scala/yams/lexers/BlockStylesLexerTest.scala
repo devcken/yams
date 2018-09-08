@@ -263,6 +263,26 @@ class BlockStylesLexerTest extends yams.helper.YamsSpec {
           assertResult(Right(expected))(actual)
         }
       }
+
+      "ex 8.11. More Indented Lines" in {
+        object SpacedLinesTestLexer extends BlockStylesLexer {
+          def apply(x: String, n: Int): Either[YamlLoadError, String] = {
+            parse(spacedLines(n), x) match {
+              case NoSuccess(m, next) => Left(YamlLoadError(next.pos, m))
+              case Success(y, _) => Right(y)
+            }
+          }
+        }
+
+        val exampleYamlPath = "example/ch8_block-styles/ex8.10_folded-lines.yml"
+
+        val x = readLines(exampleYamlPath, 7 to 10)
+
+        val expected = Right("  * bullet\\n\\n  * list\\n  * lines")
+        val actual = SpacedLinesTestLexer(x, 1)
+
+        assertResult(expected)(actual)
+      }
     }
   }
 }
