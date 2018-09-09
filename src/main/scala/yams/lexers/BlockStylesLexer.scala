@@ -238,6 +238,27 @@ trait BlockStylesLexer extends scala.util.parsing.combinator.RegexParsers
     }
   }
 
+  /** The folded style is denoted by the “>” indicator. It is similar to the literal style; however,
+    * folded scalars are subject to line folding.
+    *
+    * {{{
+    *   [174] c-l+folded(n) ::= “>” c-b-block-header(m,t)
+    *                           l-folded-content(n+m,t)
+    * }}}
+    *
+    * @param n a number of indentation spaces
+    * @return [[Parser]] for lexing '''c-l+folded(n)'''
+    */
+  private[lexers] def folded(n: Int): Parser[String] = Parser { input =>
+    parse(">" ~> blockHeader, input) match {
+      case NoSuccess(_, _) => Failure("c-l+folded(n) expected, but not found", input)
+      case Success((m, t), next) => parse(foldedContent(n + m, t), next) match {
+        case NoSuccess(msg, _) => Error(msg, input)
+        case Success(y, next2) => Success(y, next2)
+      }
+    }
+  }
+
   /** Folding allows long lines to be broken anywhere a single space character separates two non-space
     * characters.
     *

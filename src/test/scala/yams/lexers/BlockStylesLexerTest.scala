@@ -243,6 +243,24 @@ class BlockStylesLexerTest extends yams.helper.YamsSpec {
     }
 
     "8.1.3. Folded Style" - {
+      "ex 8.9. Folded Scalar" in {
+        object FoldedTestLexer extends BlockStylesLexer {
+          def apply(x: String, n: Int): Either[YamlLoadError, String] = {
+            parse(folded(n), x) match {
+              case NoSuccess(m, next) => Left(YamlLoadError(next.pos, m))
+              case Success(y, _) => Right(y)
+            }
+          }
+        }
+
+        val x = readAll("example/ch8_block-styles/ex8.9_folded-scalar.yml")
+
+        val expected = Right("folded text\\n")
+        val actual = FoldedTestLexer(x, 1)
+
+        assertResult(expected)(actual)
+      }
+
       "ex 8.10. Folded Lines" in {
         object FoldedLinesTestLexer extends BlockStylesLexer {
           def apply(x: String, n: Int): Either[YamlLoadError, String] = {
