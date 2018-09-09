@@ -427,7 +427,14 @@ trait FlowStylesLexer extends scala.util.parsing.combinator.RegexParsers
     }
   }
 
-  import tokens._
+  import tokens.FlowNodeToken
+  import tokens.FlowEntryToken
+  import tokens.FlowSequenceToken
+  import tokens.FlowMappingToken
+  import tokens.ScalarToken
+  import tokens.SingleQuoted
+  import tokens.DoubleQuoted
+  import tokens.Plain
 
   /** A flow collection may be nested within a block collection (flow-out context), nested within another 
     * flow collection (flow-in context), or be a part of an implicit key (flow-key context or block-key 

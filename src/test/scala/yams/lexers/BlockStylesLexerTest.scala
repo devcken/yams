@@ -1,6 +1,8 @@
 package yams
 package lexers
 
+import yams.tokens.TagToken
+
 /** Tests for [[BlockStylesLexer]]
   * 
   * @author Leejun Choi
@@ -8,6 +10,8 @@ package lexers
   * @see [[http://yaml.org/spec/1.2/spec.html#Block]]
   */
 class BlockStylesLexerTest extends yams.helper.YamsSpec {
+  import tokens.{ScalarToken, Literal, Folded}
+  
   "8.1. Block Scalar Styles" - {
     "8.1.1. Block Scalar Headers" - {
       "8.1.1.1. Block Indentation Indicator" - {
@@ -188,7 +192,7 @@ class BlockStylesLexerTest extends yams.helper.YamsSpec {
     "8.1.2. Literal Style" - {
       "ex 8.7. Literal Scalar" in {
         object LiteralTestLexer extends BlockStylesLexer {
-          def apply(x: String, n: Int): Either[YamlLoadError, String] = {
+          def apply(x: String, n: Int): Either[YamlLoadError, ScalarToken] = {
             parse(literal(n), x) match {
               case NoSuccess(m, next) => Left(YamlLoadError(next.pos, m))
               case Success(y, _) => Right(y)
@@ -205,8 +209,8 @@ class BlockStylesLexerTest extends yams.helper.YamsSpec {
            ↓
          */
         
-        val expected = Right("literal\\n\ttext\\n")
-        val actual = LiteralTestLexer(x, 1)
+        val expected = Right(ScalarToken("literal\\n\ttext\\n", Literal))
+        val actual = LiteralTestLexer(x, 0)
         
         assertResult(expected)(actual)
       }
@@ -245,7 +249,7 @@ class BlockStylesLexerTest extends yams.helper.YamsSpec {
     "8.1.3. Folded Style" - {
       "ex 8.9. Folded Scalar" in {
         object FoldedTestLexer extends BlockStylesLexer {
-          def apply(x: String, n: Int): Either[YamlLoadError, String] = {
+          def apply(x: String, n: Int): Either[YamlLoadError, ScalarToken] = {
             parse(folded(n), x) match {
               case NoSuccess(m, next) => Left(YamlLoadError(next.pos, m))
               case Success(y, _) => Right(y)
@@ -255,8 +259,8 @@ class BlockStylesLexerTest extends yams.helper.YamsSpec {
 
         val x = readAll("example/ch8_block-styles/ex8.9_folded-scalar.yml")
 
-        val expected = Right("folded text\\n")
-        val actual = FoldedTestLexer(x, 1)
+        val expected = Right(ScalarToken("folded text\\n", Folded))
+        val actual = FoldedTestLexer(x, 0)
 
         assertResult(expected)(actual)
       }
@@ -340,6 +344,189 @@ class BlockStylesLexerTest extends yams.helper.YamsSpec {
         val actual = FoldedContent(x, 1, Clip)
 
         assertResult(expected)(actual)
+      }
+    }
+  }
+
+  "8.2. Block Collection Styles" - {
+    import tokens.{FlowNodeToken, FlowSequenceToken, FlowMappingToken, FlowEntryToken, EmptyNodeToken, Plain, DoubleQuoted, NodePropertyToken}
+
+    "8.2.3. Block Nodes" - {
+      "ex 8.14. Block Sequence" in {
+        object BlockSequenceTestLexer extends BlockStylesLexer {
+          def apply(x: String, n: Int): Either[YamlLoadError, FlowSequenceToken] = {
+            parse(blockSequence(n), x) match {
+              case NoSuccess(m, next) => Left(YamlLoadError(next.pos, m))
+              case Success(y, _) => Right(y)
+            }
+          }
+        }
+
+        /*
+           block sequence:
+           ··- one↓
+             - two : three↓
+         */
+
+        val x = readLines("example/ch8_block-styles/ex8.14_block-sequence.yml", 1 to 2)
+
+        val expected =
+          FlowSequenceToken(
+            List(ScalarToken("one", Plain),
+              FlowMappingToken(
+                List(
+                  FlowEntryToken(ScalarToken("two"), ScalarToken("three"))
+                )
+              )
+            )
+          )
+        val actual = BlockSequenceTestLexer(x, 2)
+
+        assertResult(Right(expected))(actual)
+      }
+
+      "ex 8.15. Block Sequence Entry Types" in {
+        object BlockIndentedTestLexer extends BlockStylesLexer {
+          def apply(x: String, n: Int, c: Context): Either[YamlLoadError, FlowNodeToken] = {
+            parse("-" ~> blockIndented(n, c), x) match {
+              case NoSuccess(m, next) => Left(YamlLoadError(next.pos, m))
+              case Success(y, _) => Right(y)
+            }
+          }
+        }
+
+        List(
+          (0 to 0, EmptyNodeToken()),
+          (1 to 2, ScalarToken("block node\\n", Literal)),
+          (3 to 4, FlowSequenceToken(List(ScalarToken("one"), ScalarToken("two")))),
+          (5 to 5, FlowMappingToken(List(FlowEntryToken(ScalarToken("one"), ScalarToken("two")))))
+        ).foreach{
+          case (lines, expected) =>
+            val actual = BlockIndentedTestLexer(readLines("example/ch8_block-styles/ex8.15_block-sequences-entry-types.yml", lines), 0, BlockIn)
+            assertResult(Right(expected))(actual)
+        }
+      }
+
+      "ex 8.16. Block Mappings" in {
+        object BlockMappingTestLexer extends BlockStylesLexer {
+          def apply(x: String, n: Int): Either[YamlLoadError, FlowMappingToken] = {
+            parse(blockMapping(n), x) match {
+              case NoSuccess(m, next) => Left(YamlLoadError(next.pos, m))
+              case Success(y, _) => Right(y)
+            }
+          }
+        }
+
+        val x = readLine("example/ch8_block-styles/ex8.16_block-mappings.yml", 1)
+
+        val expected = Right(FlowMappingToken(List(FlowEntryToken(ScalarToken("key"), ScalarToken("value")))))
+        val actual = BlockMappingTestLexer(x, 1)
+
+        assertResult(expected)(actual)
+      }
+
+      "ex 8.17. Explicit Block Mapping Entries" in {
+        object BlockMapEntryTestLexer extends BlockStylesLexer {
+          def apply(x: String, n: Int): Either[YamlLoadError, FlowEntryToken] = {
+            parse(blockMapEntry(n), x) match {
+              case NoSuccess(m, next) => Left(YamlLoadError(next.pos, m))
+              case Success(y, _) => Right(y)
+            }
+          }
+        }
+
+        List(
+          (0 to 0, 0, FlowEntryToken(ScalarToken("explicit key"), EmptyNodeToken())),
+          (1 to 4, 0, FlowEntryToken(ScalarToken("block key\\n", Literal), FlowSequenceToken(List(ScalarToken("one"), ScalarToken("two")))))
+        ).foreach {
+          case (lines, indentation, expected) =>
+            val actual = BlockMapEntryTestLexer(readLines("example/ch8_block-styles/ex8.17_explicit-block-mapping-entries.yml", lines), indentation)
+            assertResult(Right(expected))(actual)
+        }
+      }
+
+      "ex 8.18. Implicit Block Mapping Entries" in {
+        object BlockMapImplicitEntry extends BlockStylesLexer {
+          def apply(x: String, n: Int): Either[YamlLoadError, FlowEntryToken] = {
+            parse(blockMapImplicitEntry(n), x) match {
+              case NoSuccess(m, next) => Left(YamlLoadError(next.pos, m))
+              case Success(y, _) => Right(y)
+            }
+          }
+        }
+
+        List[(Range, FlowNodeToken)](
+          (0 to 0, FlowEntryToken(ScalarToken("plain key"), ScalarToken("in-line value"))),
+          (1 to 1, FlowEntryToken(EmptyNodeToken(), EmptyNodeToken())),
+          (2 to 4, FlowEntryToken(ScalarToken("quoted key", DoubleQuoted), FlowSequenceToken(List(ScalarToken("entry")))))
+        ).foreach {
+          case (lines, expected) =>
+            val actual = BlockMapImplicitEntry(readLines("example/ch8_block-styles/ex8.18_implicit-block-mapping-entries.yml", lines), 0)
+            assertResult(Right(expected))(actual)
+        }
+      }
+
+      "ex 8.19. Compact Block Mappings" in {
+        object CompactMappingTestLexer extends BlockStylesLexer {
+          def apply(x: String, n: Int): Either[YamlLoadError, FlowMappingToken] = {
+            parse("- " ~> compactMapping(n), x) match {
+              case NoSuccess(m, next) => Left(YamlLoadError(next.pos, m))
+              case Success(y, _) => Right(y)
+            }
+          }
+        }
+
+        List(
+          (0 to 0, FlowMappingToken(List(FlowEntryToken(ScalarToken("sun"), ScalarToken("yellow"))))),
+          (1 to 2, FlowMappingToken(List(FlowEntryToken(FlowMappingToken(List(FlowEntryToken(ScalarToken("earth"), ScalarToken("blue")))), FlowMappingToken(List(FlowEntryToken(ScalarToken("moon"), ScalarToken("white"))))))))
+        ).foreach {
+          case (lines, expected) =>
+            val actual = CompactMappingTestLexer(readLines("example/ch8_block-styles/ex8.19_compact-block-mappings.yml", lines), 2)
+            assertResult(Right(expected))(actual)
+        }
+      }
+
+      object BlockNodeTestLexer extends BlockStylesLexer {
+        def apply(x: String, s: String, n: Int, c: Context): Either[YamlLoadError, FlowNodeToken] = {
+          parse(s ~> blockNode(n, c), x) match {
+            case NoSuccess(m, next) => Left(YamlLoadError(next.pos, m))
+            case Success(y, _) => Right(y)
+          }
+        }
+      }
+
+      "ex 8.20. Block Node Types" in {
+        List(
+          (0, "-", FlowIn, ScalarToken("flow in block", DoubleQuoted)),
+          (2, "-", BlockIn, ScalarToken("Block scalar\\n", Folded)),
+          (4, "-", BlockIn, FlowMappingToken(List(FlowEntryToken(ScalarToken("foo"), ScalarToken("bar")))))
+        ).foreach{
+          case (line, prefix, context, expected) =>
+            val actual = BlockNodeTestLexer(readLines("example/ch8_block-styles/ex8.20_block-node-types.yml", line to line + 1), prefix, 0, context)
+            assertResult(Right(expected))(actual)
+        }
+      }
+
+      "ex 8.21. Block Scalar Nodes" in {
+        List(
+          (0 to 1, "literal:", 0, FlowIn, ScalarToken("value\\n", Literal)),
+          (2 to 5, "folded:", 0, BlockIn, ScalarToken("value", Folded, Some(NodePropertyToken(Some(TagToken(Some("!"), Some("foo")))))))
+        ).foreach{
+          case (lines, prefix, indent, context, expected) =>
+            val actual = BlockNodeTestLexer(readLines("example/ch8_block-styles/ex8.21_block-scalar-nodes.yml", lines), prefix, indent, context)
+            assertResult(Right(expected))(actual)
+        }
+      }
+
+      "ex 8.22. Block Collection Nodes" in {
+        List(
+          (0 to 3, "sequence:", 0, BlockIn, FlowSequenceToken(List(ScalarToken("entry"), FlowSequenceToken(List(ScalarToken("nested")))))),
+          (4 to 5, "mapping:", 1, BlockIn, FlowMappingToken(List(FlowEntryToken(ScalarToken("foo"), ScalarToken("bar")))))
+        ).foreach {
+          case (lines, prefix, indent, context, expected) =>
+            val actual = BlockNodeTestLexer(readLines("example/ch8_block-styles/ex8.22_block-collection-nodes.yml", lines), prefix, indent, context)
+            assertResult(Right(expected))(actual)
+        }
       }
     }
   }

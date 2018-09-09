@@ -99,7 +99,7 @@ trait CommentLexer extends util.parsing.combinator.RegexParsers
     */
   protected[lexers] def comments: Parser[Option[Nothing]] = Parser { input =>
     parse((optComment | startOfLine) ~ comment.*, input) match {
-      case NoSuccess(_, _) => Failure("s-l-comments", input)
+      case NoSuccess(_, _) => Failure("s-l-comments expected, but not found", input)
       case Success(_, next) => Success(None, next)
     }
   }
