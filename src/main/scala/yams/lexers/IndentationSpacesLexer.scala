@@ -21,11 +21,37 @@ trait IndentationSpacesLexer extends scala.util.parsing.combinator.RegexParsers
     *   [63] s-indent(n) ::= s-space × n
     * }}}
     *
-    * @param n a number of an indentation spaces
-    * @return [[Parser]] for lexing '''s-indent'''
+    * @param n a number of indentation spaces
+    * @return [[Parser]] for lexing '''s-indent(n)'''
     * @see [[http://yaml.org/spec/1.2/spec.html#s-indent(n)]]
     */
   def indent(n: Int): Parser[Int] = s"$Space{$n}".r ^^ { _ => n }
+
+  /** In the block collection styles, you should be able to automatically detect additional indentation 
+    * levels in addition to the given indentation level.
+    * 
+    * {{{
+    *   [63] s-indent(n) ::= s-space × n
+    * }}}
+    * 
+    * In the specification, if auto-detection of indentation level is required, it is indicated as follows:
+    * 
+    * {{{
+    *   ...
+    *   /* For some fixed auto-detected m > 0 */
+    *   ...
+    * }}}
+    * 
+    * @param n a number of indentation spaces
+    * @return [[Parser]] for lexing '''s-indent(n)'''
+    * @see [[http://yaml.org/spec/1.2/spec.html#s-indent(n)]]
+    */
+  def indentAutoDetection: Parser[Int] = Parser { input =>
+    parse(s"$Space*".r, input) match {
+      case NoSuccess(_, _) => Failure("s-indent(n) expected, but not found", input)
+      case Success(y, next) => Success(y.length, next)
+    }
+  }
 
   /** A block style construct is terminated when encountering a line which is less indented than the construct.
     *
@@ -33,13 +59,14 @@ trait IndentationSpacesLexer extends scala.util.parsing.combinator.RegexParsers
     *   [64] s-indent(<n) ::= s-space × m /* Where m < n */
     * }}}
     *
-    * @param n a number of an indentation spaces
+    * @param n a number of indentation spaces
     * @return [[Parser]] for lexing '''s-indent(&lt;n)'''
     * @see [[http://yaml.org/spec/1.2/spec.html#s-indent(&lt;n)]]
     */
   def indentLt(n: Int): Parser[Int] = n match {
-    case x if x <= 0 => throw new Exception() // TODO definition of exception
-    case _ => s"$Space{0,${n - 1}}".r ^^ { _.length }
+    case x if x < 0 => throw new Exception() // TODO definition of exception
+    case x if x == 0 => Parser { input => Success(0, input) }
+    case _ => s"[$Space]*".r ^^ { case space if space.length < n => space.length }
   }
 
   /** A block style construct is terminated when encountering a line which is less indented than the construct.
@@ -48,12 +75,13 @@ trait IndentationSpacesLexer extends scala.util.parsing.combinator.RegexParsers
     *   [65] s-indent(≤n) ::= s-space × m /* Where m ≤ n */
     * }}}
     *
-    * @param n a number of an indentation spaces
+    * @param n a number of indentation spaces
     * @return [[Parser]] for lexing '''s-indent(≤n)'''
     * @see [[http://yaml.org/spec/1.2/spec.html#s-indent(≤n)]]
     */
   def indentLte(n: Int): Parser[Int] = n match {
-    case x if x <= 0 => throw new Exception() // TODO definition of exception
-    case _ => s"$Space{0,$n}".r ^^ { _.length }
+    case x if x < 0 => throw new Exception() // TODO definition of exception
+    case x if x == 0 => Parser { input => Success(0, input) }
+    case _ => s"[$Space]*".r ^^ { case space if space.length <= n => space.length }
   }
 }

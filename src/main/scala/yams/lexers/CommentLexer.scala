@@ -19,13 +19,10 @@ trait CommentLexer extends util.parsing.combinator.RegexParsers
     * @return [[Parser]] for lexing '''c-nb-comment-text'''
     * @see [[http://yaml.org/spec/1.2/spec.html#c-nb-comment-text]]
     */
-  private[lexers] def commentText: Parser[Option[Nothing]] = Parser { input =>
-    val source = input.source
-    val subSequence = input.source.subSequence(input.offset, source.length)
-
-    s"#$NoBreakChar*".r findPrefixMatchOf subSequence match {
-      case Some(m) => Success(None, input.drop(m.end))
-      case _ => Failure("Not found any c-nb-comment-text", input)
+  private[lexers] def commentText: Parser[String] = Parser { input =>
+    parse(s"#$NoBreakChar*".r, input) match {
+      case NoSuccess(_, _) => Failure("Not found any c-nb-comment-text", input)
+      case Success(y, next) => Success(y, next)
     }
   }
   
@@ -71,7 +68,7 @@ trait CommentLexer extends util.parsing.combinator.RegexParsers
     * @note [[commentBreak]] means just a break or end-of-file.
     */
   private[lexers] def optComment: Parser[Option[Nothing]] =
-    opt(separateInLine ~ opt(commentText)) <~ commentBreak ^^ { _ => None }
+    (separateInLine ~ commentText.?).? <~ commentBreak ^^ { _ => None }
 
   /** Outside scalar content, comments may appear on a line of their own, independent of the indentation
     * level. Note that outside scalar content, a line containing only white space characters is taken to
@@ -87,8 +84,7 @@ trait CommentLexer extends util.parsing.combinator.RegexParsers
     * @return [[Parser]] for lexing l-comment
     * @see [[http://yaml.org/spec/1.2/spec.html#l-comment]]
     */
-  protected[lexers] def comment: Parser[Option[Nothing]] =
-    separateInLine ~ commentText.? ~ commentBreak ^^ { _ => None }
+  protected[lexers] def comment: Parser[Option[String]] = separateInLine ~> commentText.? <~ commentBreak
 
   /** In most cases, when a line may end with a comment, YAML allows it to be followed by additional
     * comment lines. The only exception is a comment ending a block scalar header.
@@ -101,11 +97,10 @@ trait CommentLexer extends util.parsing.combinator.RegexParsers
     * @return [[Parser]] for lexing s-l-comments
     * @see [[http://yaml.org/spec/1.2/spec.html#s-l-comments]]
     */
-  protected[lexers] def comments: Parser[Option[Nothing]] = {
-    (optComment | "^".r) ~
-      repsep(Parser { input =>
-        if (input.atEnd) Failure("reached at end", input)
-        else Success(None, input)
-      }, comment) ^^ { _ => None }
+  protected[lexers] def comments: Parser[Option[Nothing]] = Parser { input =>
+    parse((optComment | startOfLine) ~ comment.*, input) match {
+      case NoSuccess(_, _) => Failure("s-l-comments expected, but not found", input)
+      case Success(_, next) => Success(None, next)
+    }
   }
 }

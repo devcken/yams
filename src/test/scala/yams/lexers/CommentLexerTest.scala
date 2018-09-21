@@ -10,14 +10,14 @@ package yams.lexers
 class CommentLexerTest extends yams.helper.YamsSpec {
   import yams.YamlLoadError
   object CommentTestLexer extends CommentLexer {
-    def apply(x: String): Either[YamlLoadError, Option[Nothing]] =
+    def apply(x: String): Either[YamlLoadError, Option[String]] =
       parse(comment, x) match {
         case NoSuccess(m, rest) => Left(YamlLoadError(rest.pos, m))
         case Success(y, _)      => Right(y)
       }
   }
 
-  "Only one single line comment" in assertResult(Right(None))(CommentTestLexer(" # Comment "))
+  "Only one single line comment" in assertResult(Right(Some("# Comment ")))(CommentTestLexer(" # Comment "))
 
   "No comment" in assertResult(Right(None))(CommentTestLexer(" "))
   
@@ -52,8 +52,11 @@ class CommentLexerTest extends yams.helper.YamsSpec {
      */
     
     val x = readAll("example/ch6_basic-structures/ex6.10_comment-lines.yml")
+
+    val expected = Right(Some("# Comment"))
+    val actual = CommentTestLexer(x)
     
-    assert(CommentTestLexer(x) == Right(None))
+    assertResult(expected)(actual)
   }
   
   "ex 6.11. Multi-Line Comments" in {
@@ -74,6 +77,9 @@ class CommentLexerTest extends yams.helper.YamsSpec {
         }
     }
 
-    assert(CommentTestLexer(x) == Right(("key:", "  value")))
+    val expected = Right(("key:", "  value"))
+    val actual = CommentTestLexer(x)
+
+    assertResult(expected)(actual)
   }
 }

@@ -9,7 +9,7 @@ case object Folded extends ScalarStyle
 case object Plain extends ScalarStyle
 
 case class ScalarToken(value: String, style: ScalarStyle = Plain, property: Option[NodePropertyToken] = None) extends FlowNodeToken {
-  override def +(property: Option[NodePropertyToken]): FlowNodeToken = {
+  override def +(property: Option[NodePropertyToken]): ScalarToken = {
     ScalarToken(value, style, property)
   }
 }
