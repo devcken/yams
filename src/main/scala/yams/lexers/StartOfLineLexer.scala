@@ -38,9 +38,9 @@ trait StartOfLineLexer extends scala.util.parsing.combinator.RegexParsers
   private[lexers] def startOfLine: Parser[Option[Nothing]] = Parser { input =>
     if (input.offset == 0) Success(None, input)
     else {
-      val precedingSubSequence = input.source.subSequence(0, input.offset)
+      val precedingSubSequence = input.source.subSequence(input.offset - 1, input.offset)
 
-      parse(s"[$Break]$$".r, precedingSubSequence) match {
+      parse(s"[$Break]".r, precedingSubSequence) match {
         case NoSuccess(_, _) => Failure("/* Start of line */ expected, but not found", input)
         case Success(_, _) => Success(None, input)
       }

@@ -1,8 +1,6 @@
 package yams
 package lexers
 
-import yams.tokens.TagToken
-
 /** Tests for [[BlockStylesLexer]]
   * 
   * @author Leejun Choi
@@ -508,6 +506,8 @@ class BlockStylesLexerTest extends yams.helper.YamsSpec {
       }
 
       "ex 8.21. Block Scalar Nodes" in {
+        import yams.tokens.TagToken
+        
         List(
           (0 to 1, "literal:", 0, FlowIn, ScalarToken("value\\n", Literal)),
           (2 to 5, "folded:", 0, BlockIn, ScalarToken("value", Folded, Some(NodePropertyToken(Some(TagToken(Some("!"), Some("foo")))))))

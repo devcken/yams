@@ -175,7 +175,7 @@ trait BlockStylesLexer extends scala.util.parsing.combinator.RegexParsers
       }
 
     def trailComments(n: Int): Parser[String] =
-      indentLt(n) ~> (commentText <~ commentBreak) ~ comment.* ^^ {
+      indentLt(n) ~> (commentText <~ commentBreak) ~ commentLine.* ^^ {
         case a ~ b => a + b.filter(p => p.nonEmpty).map(x => x.get).mkString
       }
 
@@ -387,9 +387,7 @@ trait BlockStylesLexer extends scala.util.parsing.combinator.RegexParsers
     blockSequenceEntries.+ ^^ FlowSequenceToken
   }
 
-  def blockSeqEntry(n: Int): Parser[FlowNodeToken] = Parser { input =>
-    parse("-" ~> blockIndented(n, BlockIn), input)
-  }
+  def blockSeqEntry(n: Int): Parser[FlowNodeToken] = "-" ~> blockIndented(n, BlockIn)
 
   /** The entry node may be either completely empty, be a nested block node, or use a compact in-line
     * notation. The compact notation may be used when the entry is itself a nested block collection.

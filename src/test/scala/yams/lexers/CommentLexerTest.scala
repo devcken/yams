@@ -9,9 +9,10 @@ package yams.lexers
   */
 class CommentLexerTest extends yams.helper.YamsSpec {
   import yams.YamlLoadError
+
   object CommentTestLexer extends CommentLexer {
     def apply(x: String): Either[YamlLoadError, Option[String]] =
-      parse(comment, x) match {
+      parse(commentLine, x) match {
         case NoSuccess(m, rest) => Left(YamlLoadError(rest.pos, m))
         case Success(y, _)      => Right(y)
       }
@@ -19,7 +20,7 @@ class CommentLexerTest extends yams.helper.YamsSpec {
 
   "Only one single line comment" in assertResult(Right(Some("# Comment ")))(CommentTestLexer(" # Comment "))
 
-  "No comment" in assertResult(Right(None))(CommentTestLexer(" "))
+  "No comment" in assertResult(Left(YamlLoadError(scala.util.parsing.input.OffsetPosition(" ", 0), "l-comment expected, but not found")))(CommentTestLexer(" "))
   
   "ex 6.9. Separated Comment" in {
     /*
