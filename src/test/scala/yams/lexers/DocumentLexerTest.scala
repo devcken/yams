@@ -28,6 +28,24 @@ class DocumentLexerTest extends yams.helper.YamsSpec {
         
         assertResult(expected)(actual)
       }
+
+      "ex 9.2. Document Markers" in {
+        object DocumentMarkersTestParser extends DocumentLexer {
+          def apply(x: String, s1: String, s2: String): Either[YamlLoadError, (String, String)] = {
+            parse(s1 ~> DocumentEndMarker ~ (s2 ~> documentSuffix), x) match {
+              case NoSuccess(m, rest) => Left(YamlLoadError(rest.pos, m))
+              case Success(a ~ b, _) => Right((a, b))
+            }
+          }
+        }
+
+        val x = readAll("example/ch9_character-stream/ex9.2_document-markers.yml")
+
+        val expected = Right(("---", "..."))
+        val actual = DocumentMarkersTestParser(x, "%YAML 1.2\n", "\nDocument\n")
+
+        assertResult(expected)(actual)
+      }
     }
   }
 }
