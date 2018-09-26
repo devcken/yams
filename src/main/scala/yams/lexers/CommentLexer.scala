@@ -84,10 +84,8 @@ trait CommentLexer extends util.parsing.combinator.RegexParsers
     */
   protected[lexers] def commentLine: Parser[Option[String]] = Parser { input =>
     parse(separateInLine ~> commentText <~ commentBreak, input) match {
-      case NoSuccess(msg, _) =>
-        Failure("l-comment expected, but not found", input)
-      case Success(y, rest) =>
-        Success(y, rest)
+      case NoSuccess(_, _) => Failure("l-comment expected, but not found", input)
+      case Success(y, rest) => Success(y, rest)
     }
   }
 

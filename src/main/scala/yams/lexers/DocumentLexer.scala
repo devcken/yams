@@ -9,7 +9,8 @@ package lexers
   * @see [[http://yaml.org/spec/1.2/spec.html#id2800132]]
   */
 trait DocumentLexer extends scala.util.parsing.combinator.RegexParsers
-                       with CommentLexer {
+                       with CommentLexer
+                       with BlockStylesLexer {
   /** A document may be preceded by a prefix specifying the character encoding, and optional comment 
     * lines. Note that all documents in a stream must use the same character encoding. However it is 
     * valid to re-specify the encoding using a byte order mark for each document in the stream. This 
@@ -63,4 +64,53 @@ trait DocumentLexer extends scala.util.parsing.combinator.RegexParsers
     * @see [[http://yaml.org/spec/1.2/spec.html#l-document-suffix]]
     */
   private[lexers] def documentSuffix: Parser[String] = DocumentEndMarker <~ comments
+  
+  import yams.tokens.DocumentToken
+
+  /** A bare document does not begin with any directives or marker lines. Such documents are very “clean”
+    * as they contain nothing other than the content. In this case, the first non-comment line may not
+    * start with a “%” first character.
+    *
+    * Document nodes are indented as if they have a parent indented at -1 spaces. Since a node must be
+    * more indented than its parent node, this allows the document’s node to be indented at zero or
+    * more spaces.
+    *
+    * {{{
+    *   [207] l-bare-document ::= s-l+block-node(-1,block-in)
+    *                             /* Excluding c-forbidden content */
+    * }}}
+    *
+    * @return [[Parser]] for lexing '''l-bare-document'''
+    * @see [[http://yaml.org/spec/1.2/spec.html#l-bare-document]]
+    */
+  private[lexers] def bareDocument: Parser[DocumentToken] = blockNode(-1, BlockIn) ^^ { DocumentToken(_) }
+
+  /** An explicit document begins with an explicit directives end marker line but no directives.
+    * Since the existence of the document is indicated by this marker, the document itself may be
+    * completely empty.
+    *
+    * {{{
+    *   [208] l-explicit-document ::= c-directives-end
+    *                                 ( l-bare-document
+    *                                 | ( e-node s-l-comments ) )
+    * }}}
+    *
+    * @return [[Parser]] for lexing '''l-explicit-document'''
+    * @see [[http://yaml.org/spec/1.2/spec.html#l-explicit-document]]
+    */
+  private[lexers] def explicitDocument: Parser[DocumentToken] =
+    DirectivesEndMarker ~> (bareDocument | (emptyNode <~ comments) ^^ { DocumentToken(_) })
+
+  /** A directives document begins with some directives followed by an explicit directives end marker line.
+    *
+    * {{{
+    *   [209] l-directive-document ::= l-directive+
+    *                                  l-explicit-document
+    * }}}
+    *
+    * @return [[Parser]] for lexing '''l-directive-document'''
+    * @see [[http://yaml.org/spec/1.2/spec.html#l-directive-document]]
+    */
+  private[lexers] def directiveDocument: Parser[DocumentToken] = 
+    directive.+ ~ explicitDocument ^^ { case a ~ b => b + a }
 }
