@@ -11,8 +11,6 @@ class DirectiveLexerTest extends yams.helper.YamsSpec {
   import yams.tokens.{ReservedDirectiveToken, TagDirectiveToken, YamlDirectiveToken}
   
   object DirectiveTestLexer extends DirectiveLexer {
-
-
     def apply(x: String): Either[YamlLoadError, Any] =
       parse(directive, x) match {
         case NoSuccess(y, next) => Left(YamlLoadError(next.pos, y))

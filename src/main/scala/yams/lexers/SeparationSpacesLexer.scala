@@ -25,8 +25,10 @@ trait SeparationSpacesLexer extends scala.util.parsing.combinator.RegexParsers
     */
   private[lexers] def separateInLine: Parser[Option[Nothing]] = Parser { input =>
     parse(s"[$White]+".r | startOfLine, input) match {
-      case NoSuccess(_, _) => Failure("s-separate-in-line expected, but not found", input)
-      case Success(_, next) => Success(None, next)
+      case NoSuccess(_, _) =>
+        Failure("s-separate-in-line expected, but not found", input)
+      case Success(_, next) =>
+        Success(None, next)
     }
   }
 }

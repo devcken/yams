@@ -36,7 +36,7 @@ class LineFoldingLexerTest extends yams.helper.YamsSpec {
     assertResult(expected)(actual)
   }
   
-  "ex 6.7. Block Folding" ignore { // TODO 6.7. Block Folding test ignored now 
+  "ex 6.7. Block Folding" ignore { // TODO 6.7. Block Folding test ignored now
     object BlockFoldingTestLexer extends LineFoldingLexer {
       def apply(s1: String, s2: String, s3: String, x: String, n: Int, c: Context): Either[YamlLoadError, String] =
         parse(s1 ~ folded(n, c) ~ s2 ~ folded(n, c) ~ s3, x) match {

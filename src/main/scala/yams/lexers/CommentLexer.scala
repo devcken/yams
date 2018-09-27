@@ -1,5 +1,7 @@
 package yams.lexers
 
+import com.typesafe.scalalogging.LazyLogging
+
 /** An explicit comment is marked by a “#” indicator.
   *
   * @author Leejun Choi
@@ -7,7 +9,7 @@ package yams.lexers
   * @see [[http://yaml.org/spec/1.2/spec.html#id2780069]]
   */
 trait CommentLexer extends util.parsing.combinator.RegexParsers
-                      with SeparationSpacesLexer {
+                      with SeparationSpacesLexer with LazyLogging {
   override def skipWhitespace: Boolean = false
 
   /** An explicit comment must be marked by a “#” indicator.
@@ -19,10 +21,13 @@ trait CommentLexer extends util.parsing.combinator.RegexParsers
     * @return [[Parser]] for lexing '''c-nb-comment-text'''
     * @see [[http://yaml.org/spec/1.2/spec.html#c-nb-comment-text]]
     */
-  private[lexers] def commentText: Parser[String] = Parser { input =>
+  private[lexers] def commentText: Parser[Option[String]] = Parser { input =>
     parse(s"#$NoBreakChar*".r, input) match {
-      case NoSuccess(_, _) => Failure("Not found any c-nb-comment-text", input)
-      case Success(y, next) => Success(y, next)
+      case NoSuccess(_, _) => parse(s"[$Break]", input) match {
+        case NoSuccess(_, _) => Failure("c-nb-comment-text expected, not found", input)
+        case Success(_, _) => Success(None, input)
+      }
+      case Success(y, next) => Success(Some(y), next)
     }
   }
   
@@ -35,17 +40,10 @@ trait CommentLexer extends util.parsing.combinator.RegexParsers
     * @return [[Parser]] for lexing '''b-comment'''
     * @see [[http://yaml.org/spec/1.2/spec.html#b-comment]]
     */
-  private[lexers] def commentBreak: Parser[Option[Nothing]] = Parser { input: Input =>
-    val source = input.source
-    val subSequence = source.subSequence(input.offset, source.length)
-
-    s"""(?:[$NonContent]|$$)""".r findPrefixMatchOf subSequence match {
-//      case Some(m) if input.drop(m.end).atEnd =>
-//        Failure("It's not a real failure, means that reached the end of sequence.", input.drop(m.end))
-      case Some(m) => Success(None, input.drop(m.end))
-      // Should not be reached here. If reached here, it means that something is wrong,
-      // and should check all of CommentLexer again.
-      case _       => Failure("Not found any b-comment.", input)
+  private[lexers] def commentBreak: Parser[(Boolean, Boolean)] = Parser { input: Input =>
+    parse(s"[$NonContent]".r, input) match {
+      case NoSuccess(_, _) => Success((false, input.atEnd), input)
+      case Success(_, rest) => Success((true, false), rest)
     }
   }
   
@@ -84,7 +82,12 @@ trait CommentLexer extends util.parsing.combinator.RegexParsers
     * @return [[Parser]] for lexing l-comment
     * @see [[http://yaml.org/spec/1.2/spec.html#l-comment]]
     */
-  protected[lexers] def comment: Parser[Option[String]] = separateInLine ~> commentText.? <~ commentBreak
+  protected[lexers] def commentLine: Parser[Option[String]] = Parser { input =>
+    parse(separateInLine ~> commentText <~ commentBreak, input) match {
+      case NoSuccess(_, _) => Failure("l-comment expected, but not found", input)
+      case Success(y, rest) => Success(y, rest)
+    }
+  }
 
   /** In most cases, when a line may end with a comment, YAML allows it to be followed by additional
     * comment lines. The only exception is a comment ending a block scalar header.
@@ -98,7 +101,7 @@ trait CommentLexer extends util.parsing.combinator.RegexParsers
     * @see [[http://yaml.org/spec/1.2/spec.html#s-l-comments]]
     */
   protected[lexers] def comments: Parser[Option[Nothing]] = Parser { input =>
-    parse((optComment | startOfLine) ~ comment.*, input) match {
+    parse((optComment | startOfLine) ~ commentLine.*, input) match {
       case NoSuccess(_, _) => Failure("s-l-comments expected, but not found", input)
       case Success(_, next) => Success(None, next)
     }
