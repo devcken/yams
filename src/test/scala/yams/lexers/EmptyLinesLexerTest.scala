@@ -1,7 +1,6 @@
 package yams.lexers
 
-import org.scalatest.FreeSpec
-import yams.helper.ExampleReader
+import yams.helper.YamsSpec
 
 /** A test for [[EmptyLinesLexer]]
   *
@@ -9,8 +8,8 @@ import yams.helper.ExampleReader
   * @since 0.1
   * @see [[http://yaml.org/spec/1.2/spec.html#id2778853]]
   */
-class EmptyLinesLexerTest extends FreeSpec with ExampleReader {
-  import yams.{YamlLoadError, Context, FlowOut}
+class EmptyLinesLexerTest extends YamsSpec {
+  import yams.{Context, FlowOut, YamlLoadError}
 
   "ex 6.5. Empty Lines" - {
     "Folding" in {
