@@ -1,4 +1,5 @@
-package yams.lexers
+package yams
+package lexers
 
 /** Tests for [[FlowStylesLexer]]
   * 
@@ -6,9 +7,9 @@ package yams.lexers
   * @see [[http://yaml.org/spec/1.2/spec.html#Flow]]
   */
 class FlowStylesLexerTest extends yams.helper.YamsSpec {
-  import util.parsing.input.OffsetPosition
-  import yams.{YamlLoadError, Context, BlockKey, FlowKey, FlowIn, FlowOut}
   import yams.tokens._
+
+  import scala.util.parsing.input.OffsetPosition
 
   "7.1 Alias Node" - {
     object AliasNodeTestLexer extends FlowStylesLexer {

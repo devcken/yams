@@ -41,8 +41,7 @@ trait IndentationSpacesLexer extends scala.util.parsing.combinator.RegexParsers
     *   /* For some fixed auto-detected m > 0 */
     *   ...
     * }}}
-    * 
-    * @param n a number of indentation spaces
+    *
     * @return [[Parser]] for lexing '''s-indent(n)'''
     * @see [[http://yaml.org/spec/1.2/spec.html#s-indent(n)]]
     */

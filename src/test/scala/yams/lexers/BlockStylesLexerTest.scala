@@ -8,7 +8,7 @@ package lexers
   * @see [[http://yaml.org/spec/1.2/spec.html#Block]]
   */
 class BlockStylesLexerTest extends yams.helper.YamsSpec {
-  import tokens.{ScalarToken, Literal, Folded}
+  import tokens.ScalarToken
   
   "8.1. Block Scalar Styles" - {
     "8.1.1. Block Scalar Headers" - {
@@ -347,7 +347,7 @@ class BlockStylesLexerTest extends yams.helper.YamsSpec {
   }
 
   "8.2. Block Collection Styles" - {
-    import tokens.{FlowNodeToken, FlowSequenceToken, FlowMappingToken, FlowEntryToken, EmptyNodeToken, Plain, DoubleQuoted, NodePropertyToken}
+    import tokens.{FlowNodeToken, FlowSequenceToken, FlowMappingToken, FlowEntryToken, EmptyNodeToken, NodePropertyToken}
 
     "8.2.3. Block Nodes" - {
       "ex 8.14. Block Sequence" in {

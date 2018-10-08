@@ -23,7 +23,7 @@ trait NodePropertyLexer extends scala.util.parsing.combinator.RegexParsers
     * @return [[Parser]] for lexing '''c-ns-properties(n,c)'''
     * @see [[http://www.yaml.org/spec/1.2/spec.html#c-ns-properties(n,c)]]
     */
-  private[lexers] def nodeProperties(n: Int, c: Context): Parser[NodePropertyToken] =
+  private[yams] def nodeProperties(n: Int, c: Context): Parser[NodePropertyToken] =
     tagProperty ~ (separate(n, c) ~> anchorProperty).? ^^ { case tag ~ anchor => NodePropertyToken(Some(tag), anchor) } |
     anchorProperty ~ (separate(n, c) ~> tagProperty).? ^^ { case anchor ~ tag => NodePropertyToken(tag, Some(anchor)) }
 

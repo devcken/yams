@@ -186,8 +186,6 @@ trait BlockStylesLexer extends scala.util.parsing.combinator.RegexParsers
   }
   
   import tokens.ScalarToken
-  import tokens.Literal
-  import tokens.Folded
 
   /** The literal style is denoted by the “|” indicator. It is the simplest, most restricted, and most 
     * readable scalar style.

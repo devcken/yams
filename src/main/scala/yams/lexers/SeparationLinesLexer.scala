@@ -27,7 +27,7 @@ trait SeparationLinesLexer extends scala.util.parsing.combinator.RegexParsers
     * @return [[Parser]] for lexing '''s-separate(n,c)'''
     * @see [[http://yaml.org/spec/1.2/spec.html#s-separate(n,c)]]
     */
-  private[lexers] def separate(n: Int, c: Context): Parser[Option[Nothing]] = c match {
+  private[yams] def separate(n: Int, c: Context): Parser[Option[Nothing]] = c match {
     case BlockOut | BlockIn | FlowOut | FlowIn => separateLines(n)
     case BlockKey | FlowKey => separateInLine
     case _ => throw new Exception

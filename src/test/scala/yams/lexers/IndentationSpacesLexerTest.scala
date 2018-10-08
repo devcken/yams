@@ -1,4 +1,5 @@
-package yams.lexers
+package yams
+package lexers
 
 /** Tests for [[IndentationSpacesLexer]]
   * 
@@ -7,10 +8,9 @@ package yams.lexers
   * @see [[http://yaml.org/spec/1.2/spec.html#id2777534]]
   */
 class IndentationSpacesLexerTest extends yams.helper.YamsSpec {
-  import yams.{BlockIn, YamlLoadError}
-  import yams.tokens.{FlowNodeToken, FlowMappingToken, FlowEntryToken, ScalarToken}
+  import yams.tokens.{FlowEntryToken, FlowMappingToken, FlowNodeToken, ScalarToken}
   
-  object BlockMappingTestLexer extends BlockStylesLexer {
+  object BlockNodeTestLexer extends BlockStylesLexer {
     def apply(x: String): Either[YamlLoadError, FlowNodeToken] =
       parseAll(blockNode(-1, BlockIn), x) match {
         case NoSuccess(msg, rest) => Left(YamlLoadError(rest.pos, msg))
@@ -19,7 +19,7 @@ class IndentationSpacesLexerTest extends yams.helper.YamsSpec {
   }
 
   "ex 6.1. Indentation Spaces" in {
-    import yams.tokens.{FlowSequenceToken, Literal}
+    import yams.tokens.FlowSequenceToken
     
     /*
        Not indented:
@@ -62,7 +62,7 @@ class IndentationSpacesLexerTest extends yams.helper.YamsSpec {
         )
       )
     )
-    val actual = BlockMappingTestLexer(x)
+    val actual = BlockNodeTestLexer(x)
     
     assertResult(expected)(actual)
   }
