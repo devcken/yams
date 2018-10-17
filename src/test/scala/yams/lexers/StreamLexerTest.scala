@@ -8,7 +8,7 @@ package yams.lexers
   */
 class StreamLexerTest extends yams.helper.YamsSpec {
   import yams.YamlLoadError
-  import yams.tokens.{StreamToken, DocumentToken, ScalarToken, EmptyNodeToken, FlowMappingToken, FlowEntryToken}
+  import yams.tokens.{StreamToken, DocumentToken, ScalarToken, EmptyNodeToken, MappingToken, EntryToken}
   
   "9.2 Streams" - {
     "ex 9.6. Stream" in {
@@ -27,7 +27,7 @@ class StreamLexerTest extends yams.helper.YamsSpec {
         List(
           DocumentToken(ScalarToken("Document")),
           DocumentToken(EmptyNodeToken()), 
-          DocumentToken(FlowMappingToken(List(FlowEntryToken(ScalarToken("matches %"), ScalarToken("20")))))
+          DocumentToken(MappingToken(List(EntryToken(ScalarToken("matches %"), ScalarToken("20")))))
         )
       ))
       val actual = YamlStreamTextLexer(x)

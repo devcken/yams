@@ -8,10 +8,10 @@ package lexers
   * @see [[http://yaml.org/spec/1.2/spec.html#id2777534]]
   */
 class IndentationSpacesLexerTest extends yams.helper.YamsSpec {
-  import yams.tokens.{FlowEntryToken, FlowMappingToken, FlowNodeToken, ScalarToken}
+  import yams.tokens.{EntryToken, MappingToken, NodeToken, ScalarToken}
   
   object BlockNodeTestLexer extends BlockStylesLexer {
-    def apply(x: String): Either[YamlLoadError, FlowNodeToken] =
+    def apply(x: String): Either[YamlLoadError, NodeToken] =
       parseAll(blockNode(-1, BlockIn), x) match {
         case NoSuccess(msg, rest) => Left(YamlLoadError(rest.pos, msg))
         case Success(y, _) => Right(y)
@@ -19,7 +19,7 @@ class IndentationSpacesLexerTest extends yams.helper.YamsSpec {
   }
 
   "ex 6.1. Indentation Spaces" in {
-    import yams.tokens.FlowSequenceToken
+    import yams.tokens.SequenceToken
     
     /*
        Not indented:
@@ -36,19 +36,19 @@ class IndentationSpacesLexerTest extends yams.helper.YamsSpec {
     val x = readLines("example/ch6_basic-structures/ex6.1_indentation-spaces.yml", 3 to 11)
     
     val expected = Right(
-      FlowMappingToken(
+      MappingToken(
         List(
-          FlowEntryToken(
+          EntryToken(
             ScalarToken("Not indented"), 
-            FlowMappingToken(
+            MappingToken(
               List(
-                FlowEntryToken(
+                EntryToken(
                   ScalarToken("By one space"),
                   ScalarToken("By four\\n  spaces\\n", Literal)
                 ),
-                FlowEntryToken(
+                EntryToken(
                   ScalarToken("Flow style"),
-                  FlowSequenceToken(
+                  SequenceToken(
                     List(
                       ScalarToken("By two"),
                       ScalarToken("Also by two"),

@@ -56,7 +56,7 @@ class DocumentLexerTest extends yams.helper.YamsSpec {
       }
     }
     
-    import yams.tokens.{DocumentToken, ScalarToken, FlowMappingToken, FlowEntryToken, EmptyNodeToken, YamlDirectiveToken}
+    import yams.tokens.{DocumentToken, ScalarToken, MappingToken, EntryToken, EmptyNodeToken, YamlDirectiveToken}
 
     "9.1.3. Bare Documents" - {
       "ex 9.3. Bare Documents" in {
@@ -93,7 +93,7 @@ class DocumentLexerTest extends yams.helper.YamsSpec {
         }
         
         List(
-          (0 to 2, DocumentToken(FlowMappingToken(List(FlowEntryToken(ScalarToken("matches %"), ScalarToken("20")))))),
+          (0 to 2, DocumentToken(MappingToken(List(EntryToken(ScalarToken("matches %"), ScalarToken("20")))))),
           (4 to 5, DocumentToken(EmptyNodeToken()))
         ).foreach {
           case (lines, expected) =>

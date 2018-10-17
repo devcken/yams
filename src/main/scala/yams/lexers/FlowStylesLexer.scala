@@ -427,10 +427,10 @@ trait FlowStylesLexer extends scala.util.parsing.combinator.RegexParsers
     }
   }
 
-  import tokens.FlowNodeToken
-  import tokens.FlowEntryToken
-  import tokens.FlowSequenceToken
-  import tokens.FlowMappingToken
+  import tokens.NodeToken
+  import tokens.EntryToken
+  import tokens.SequenceToken
+  import tokens.MappingToken
   import tokens.ScalarToken
 
   /** A flow collection may be nested within a block collection (flow-out context), nested within another 
@@ -467,8 +467,8 @@ trait FlowStylesLexer extends scala.util.parsing.combinator.RegexParsers
     * @return [[Parser]] for lexing '''c-flow-sequence(n,c)'''
     * @see [[http://yaml.org/spec/1.2/spec.html#c-flow-sequence(n,c)]]
     */
-  private[lexers] def flowSequence(n: Int, c: Context): Parser[FlowSequenceToken] =
-    "[" ~> separate(n, c).? ~> flowSeqEntries(n, flow(c)) <~ "]" ^^ { FlowSequenceToken }
+  private[lexers] def flowSequence(n: Int, c: Context): Parser[SequenceToken] =
+    "[" ~> separate(n, c).? ~> flowSeqEntries(n, flow(c)) <~ "]" ^^ { SequenceToken }
   
   /** Sequence entries are separated by a “,” character.
     * 
@@ -483,7 +483,7 @@ trait FlowStylesLexer extends scala.util.parsing.combinator.RegexParsers
     * @return [[Parser]] for lexing '''ns-s-flow-seq-entries(n,c)'''
     * @see [[http://yaml.org/spec/1.2/spec.html#c-flow-seq-entries(n,c)]]
     */
-  private[lexers] def flowSeqEntries(n: Int, c: Context): Parser[List[FlowNodeToken]] =
+  private[lexers] def flowSeqEntries(n: Int, c: Context): Parser[List[NodeToken]] =
     (flowSeqEntry(n, c) <~ separate(n, c).?) ~ ("," ~> separate(n, c).? ~> flowSeqEntries(n, c).?).? ^^ {
       case entry ~ None => List(entry)
       case entry ~ Some(None) => List(entry)
@@ -502,7 +502,7 @@ trait FlowStylesLexer extends scala.util.parsing.combinator.RegexParsers
     * @return [[Parser]] for lexing '''ns-flow-seq-entry(n,c)'''
     * @see [[http://yaml.org/spec/1.2/spec.html#ns-flow-seq-entry(n,c)]]
     */
-  private[lexers] def flowSeqEntry(n: Int, c: Context): Parser[FlowNodeToken] = flowPair(n, c) | flowNode(n, c)
+  private[lexers] def flowSeqEntry(n: Int, c: Context): Parser[NodeToken] = flowPair(n, c) | flowNode(n, c)
   
   /** Flow mappings are denoted by surrounding “{” and “}” characters.
     * 
@@ -516,8 +516,8 @@ trait FlowStylesLexer extends scala.util.parsing.combinator.RegexParsers
     * @return [[Parser]] for lexing '''c-flow-mapping(n,c)'''
     * @see [[http://yaml.org/spec/1.2/spec.html#c-flow-mapping(n,c)]]
     */
-  private[lexers] def flowMapping(n: Int, c: Context): Parser[FlowMappingToken] =
-    "{" ~> separate(n, c).? ~> flowMapEntries(n, flow(c)) <~ "}" ^^ { FlowMappingToken }
+  private[lexers] def flowMapping(n: Int, c: Context): Parser[MappingToken] =
+    "{" ~> separate(n, c).? ~> flowMapEntries(n, flow(c)) <~ "}" ^^ { MappingToken }
   
   /** Mapping entries are separated by a “,” character.
     * 
@@ -532,7 +532,7 @@ trait FlowStylesLexer extends scala.util.parsing.combinator.RegexParsers
     * @return [[Parser]] for lexing '''ns-s-flow-map-entries(n,c)'''
     * @see [[http://yaml.org/spec/1.2/spec.html#ns-s-flow-map-entries(n,c)]]
     */
-  private[lexers] def flowMapEntries(n: Int, c: Context): Parser[List[FlowEntryToken]] =
+  private[lexers] def flowMapEntries(n: Int, c: Context): Parser[List[EntryToken]] =
     (flowMapEntry(n, c) <~ separate(n, c).?) ~ ("," ~> separate(n, c).? ~> flowMapEntries(n, c).?).? ^^ {
       case entry ~ None => List(entry)
       case entry ~ Some(None) => List(entry)
@@ -552,7 +552,7 @@ trait FlowStylesLexer extends scala.util.parsing.combinator.RegexParsers
     * @return [[Parser]] for lexing '''ns-flow-map-entry(n,c)'''
     * @see [[http://yaml.org/spec/1.2/spec.html#ns-flow-map-entry(n,c)]]
     */
-  private[lexers] def flowMapEntry(n: Int, c: Context): Parser[FlowEntryToken] =
+  private[lexers] def flowMapEntry(n: Int, c: Context): Parser[EntryToken] =
     flowMapExplicitEntry(n, c) | flowMapImplicitEntry(n, c)
 
   /** If the optional “?” mapping key indicator is specified, the rest of the entry may be completely empty.
@@ -568,10 +568,10 @@ trait FlowStylesLexer extends scala.util.parsing.combinator.RegexParsers
     * @return [[Parser]] for lexing '''ns-flow-map-explicit-entry(n,c)'''
     * @see [[http://yaml.org/spec/1.2/spec.html#ns-flow-map-explicit-entry(n,c)]]
     */
-  private[lexers] def flowMapExplicitEntry(n: Int, c: Context): Parser[FlowEntryToken] =
+  private[lexers] def flowMapExplicitEntry(n: Int, c: Context): Parser[EntryToken] =
     "?" ~> separate(n, c) ~>
       (flowMapImplicitEntry(n, c) |
-        (emptyNode ~ emptyNode) ^^ { case key ~ value => FlowEntryToken(key, value) })
+        (emptyNode ~ emptyNode) ^^ { case key ~ value => EntryToken(key, value) })
 
   /** In the implicit entry of the flow mapping, the key and value must be separated by “:”. Both of the
     * key and value can be empty, however they must be separated by “:”.
@@ -597,15 +597,15 @@ trait FlowStylesLexer extends scala.util.parsing.combinator.RegexParsers
     * @see [[http://yaml.org/spec/1.2/spec.html#ns-flow-map-yaml-key-entry(n,c)]]
     * @see [[http://yaml.org/spec/1.2/spec.html#c-ns-flow-map-json-key-entry(n,c)]]
     */
-  private[lexers] def flowMapImplicitEntry(n: Int, c: Context): Parser[FlowEntryToken] = {
-    def flowMapYamlKeyEntry(n: Int, c: Context): Parser[FlowEntryToken] =
+  private[lexers] def flowMapImplicitEntry(n: Int, c: Context): Parser[EntryToken] = {
+    def flowMapYamlKeyEntry(n: Int, c: Context): Parser[EntryToken] =
       (flowNode(n, c, FlowYaml) ~ ((separate(n, c).? ~> flowMapSeparateValue(n, c)) | emptyNode)) ^^ {
-        case key ~ value => FlowEntryToken(key, value)
+        case key ~ value => EntryToken(key, value)
       }
 
-    def flowMapJsonKeyEntry(n: Int, c: Context): Parser[FlowEntryToken] =
+    def flowMapJsonKeyEntry(n: Int, c: Context): Parser[EntryToken] =
       flowNode(n, c, FlowJson) ~ ((separate(n, c).? ~> flowMapAdjacentValue(n, c)) | emptyNode) ^^ {
-        case key ~ value => FlowEntryToken(key, value)
+        case key ~ value => EntryToken(key, value)
       }
 
     flowMapYamlKeyEntry(n, c) | flowMapEmptyKeyEntry(n, c) | flowMapJsonKeyEntry(n, c)
@@ -623,8 +623,8 @@ trait FlowStylesLexer extends scala.util.parsing.combinator.RegexParsers
     * @return [[Parser]] for lexing '''c-ns-flow-map-empty-key-entry(n,c)'''
     * @see [[http://yaml.org/spec/1.2/spec.html#c-ns-flow-map-empty-key-entry(n,c)]]
     */
-  private[lexers] def flowMapEmptyKeyEntry(n: Int, c: Context): Parser[FlowEntryToken] =
-    emptyNode ~ flowMapSeparateValue(n, c) ^^ { case key ~ value => FlowEntryToken(key, value) }
+  private[lexers] def flowMapEmptyKeyEntry(n: Int, c: Context): Parser[EntryToken] =
+    emptyNode ~ flowMapSeparateValue(n, c) ^^ { case key ~ value => EntryToken(key, value) }
 
   /** Normally, YAML insists the “:” mapping value indicator be separated from the value by white space.
     * A benefit of this restriction is that the “:” character can be used inside plain scalars,
@@ -645,7 +645,7 @@ trait FlowStylesLexer extends scala.util.parsing.combinator.RegexParsers
     * @return [[Parser]] for lexing '''c-ns-flow-map-separate-value(n,c)'''
     * @see [[http://yaml.org/spec/1.2/spec.html#c-ns-flow-map-separate-value(n,c)]]
     */
-  private[lexers] def flowMapSeparateValue(n: Int, c: Context): Parser[FlowNodeToken] =
+  private[lexers] def flowMapSeparateValue(n: Int, c: Context): Parser[NodeToken] =
     ":" ~> ((separate(n, c) ~> flowNode(n, c)) | emptyNode)
 
   /** To ensure JSON compatibility, if a key inside a flow mapping is JSON-like, YAML allows
@@ -664,7 +664,7 @@ trait FlowStylesLexer extends scala.util.parsing.combinator.RegexParsers
     * @return [[Parser]] for lexing '''c-ns-flow-map-adjacent-value(n,c)'''
     * @see [[http://yaml.org/spec/1.2/spec.html#c-ns-flow-map-adjacent-value(n,c)]]
     */
-  private[lexers] def flowMapAdjacentValue(n: Int, c: Context): Parser[FlowNodeToken] =
+  private[lexers] def flowMapAdjacentValue(n: Int, c: Context): Parser[NodeToken] =
     ":" ~> ((separate(n, c).? ~> flowNode(n, c)) | emptyNode)
 
   /** If the “?” indicator is explicitly specified, parsing is unambiguous, and the syntax is identical
@@ -681,7 +681,7 @@ trait FlowStylesLexer extends scala.util.parsing.combinator.RegexParsers
     * @return [[Parser]] for lexing '''ns-flow-pair(n,c)'''
     * @see [[http://yaml.org/spec/1.2/spec.html#ns-flow-pair(n,c)]]
     */
-  private[lexers] def flowPair(n: Int, c: Context): Parser[FlowEntryToken] =
+  private[lexers] def flowPair(n: Int, c: Context): Parser[EntryToken] =
     flowMapExplicitEntry(n, c) | flowPairEntry(n, c)
 
   /** If the “?” indicator is omitted, parsing needs to see past the implicit key to recognize it as
@@ -703,15 +703,15 @@ trait FlowStylesLexer extends scala.util.parsing.combinator.RegexParsers
     * @return [[Parser]] for lexing '''ns-flow-pair-entry(n,c)'''
     * @see [[http://yaml.org/spec/1.2/spec.html#ns-flow-pair-entry(n,c)]]
     */
-  private[lexers] def flowPairEntry(n: Int, c: Context): Parser[FlowEntryToken] = {
-    def flowPairYamlKeyEntry(n: Int, c: Context): Parser[FlowEntryToken] =
+  private[lexers] def flowPairEntry(n: Int, c: Context): Parser[EntryToken] = {
+    def flowPairYamlKeyEntry(n: Int, c: Context): Parser[EntryToken] =
       implicitKey(FlowKey, FlowYaml) ~ flowMapSeparateValue(n, c) ^^ {
-        case key ~ value => FlowEntryToken(key, value)
+        case key ~ value => EntryToken(key, value)
       }
 
-    def flowPairJsonKeyEntry(n: Int, c: Context): Parser[FlowEntryToken] =
+    def flowPairJsonKeyEntry(n: Int, c: Context): Parser[EntryToken] =
       implicitKey(FlowKey, FlowJson) ~ flowMapAdjacentValue(n, c) ^^ {
-        case key ~ value => FlowEntryToken(key, value)
+        case key ~ value => EntryToken(key, value)
       }
 
     flowPairYamlKeyEntry(n, c) | flowMapEmptyKeyEntry(n, c) | flowPairJsonKeyEntry(n, c)
@@ -740,7 +740,7 @@ trait FlowStylesLexer extends scala.util.parsing.combinator.RegexParsers
     * @see [[http://yaml.org/spec/1.2/spec.html#ns-s-implicit-yaml-key(c)]]
     * @see [[http://yaml.org/spec/1.2/spec.html#c-s-implicit-json-key(c)]]
     */
-  private[lexers] def implicitKey(c: Context, t: FlowNodesType): Parser[FlowNodeToken] = Parser { input =>
+  private[lexers] def implicitKey(c: Context, t: FlowNodesType): Parser[NodeToken] = Parser { input =>
     t match {
       case FlowYaml | FlowJson => parse(flowNode(0, c, t) <~ separateInLine.?, input) match {
         case NoSuccess(m, next) => Failure(m, next)
@@ -771,10 +771,10 @@ trait FlowStylesLexer extends scala.util.parsing.combinator.RegexParsers
     * @see [[http://yaml.org/spec/1.2/spec.html#ns-flow-yaml-content(n,c)]]
     * @see [[http://yaml.org/spec/1.2/spec.html#c-flow-json-content(n,c)]]
     */
-  private[lexers] def flowContent(n: Int, c: Context, t: FlowNodesType = FlowEither): Parser[FlowNodeToken] = {
-    def flowYamlContent(n: Int, c: Context): Parser[FlowNodeToken] = plain(n, c) ^^ { x => ScalarToken(x, Plain) }
+  private[lexers] def flowContent(n: Int, c: Context, t: FlowNodesType = FlowEither): Parser[NodeToken] = {
+    def flowYamlContent(n: Int, c: Context): Parser[NodeToken] = plain(n, c) ^^ { x => ScalarToken(x, Plain) }
 
-    def flowJsonContent(n: Int, c: Context): Parser[FlowNodeToken] =
+    def flowJsonContent(n: Int, c: Context): Parser[NodeToken] =
       flowSequence(n, c) |
         flowMapping(n, c) |
         singleQuoted(n, c) ^^ { x => ScalarToken(x, SingleQuoted) } |
@@ -816,15 +816,15 @@ trait FlowStylesLexer extends scala.util.parsing.combinator.RegexParsers
     * @see [[http://yaml.org/spec/1.2/spec.html#ns-flow-yaml-node(n,c)]]
     * @see [[http://yaml.org/spec/1.2/spec.html#c-flow-json-node(n,c)]]
     */
-  private[lexers] def flowNode(n: Int, c: Context, t: FlowNodesType = FlowEither): Parser[FlowNodeToken] = {
-    def flowYamlOrGeneralNode(n: Int, c: Context, t: FlowNodesType): Parser[FlowNodeToken] =
+  private[lexers] def flowNode(n: Int, c: Context, t: FlowNodesType = FlowEither): Parser[NodeToken] = {
+    def flowYamlOrGeneralNode(n: Int, c: Context, t: FlowNodesType): Parser[NodeToken] =
       aliasNode |
         flowContent(n, c, t) |
         (nodeProperties(n, c) ~ ((separate(n, c) ~> flowContent(n, c, t)) | emptyScalar)) ^^ {
           case property ~ node => node + Some(property)
         }
 
-    def flowJsonNode(n: Int, c: Context): Parser[FlowNodeToken] =
+    def flowJsonNode(n: Int, c: Context): Parser[NodeToken] =
       ((nodeProperties(n, c) <~ separate(n, c)).? ~ flowContent(n, c, FlowJson)) ^^ {
         case property ~ node => node + property
       }

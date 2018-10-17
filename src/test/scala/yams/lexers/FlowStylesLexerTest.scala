@@ -431,7 +431,7 @@ class FlowStylesLexerTest extends yams.helper.YamsSpec {
     "7.4.1. Flow Sequences" - {
       "ex 7.13. Flow Sequence" in {
         object FlowSequenceTestLexer extends FlowStylesLexer {
-          def apply(x: String, s: String, n: Int, c: Context): Either[YamlLoadError, FlowNodeToken] = {
+          def apply(x: String, s: String, n: Int, c: Context): Either[YamlLoadError, NodeToken] = {
             parse(s ~> flowSequence(n, c), x) match {
               case NoSuccess(m, next) => Left(YamlLoadError(next.pos, m))
               case Success(y, _) => Right(y)
@@ -448,14 +448,14 @@ class FlowStylesLexerTest extends yams.helper.YamsSpec {
         
         val x1 = readLine(exampleYamlPath, 0)
         
-        val expected1 = Right(FlowSequenceToken(List(ScalarToken("one"), ScalarToken("two"))))
+        val expected1 = Right(SequenceToken(List(ScalarToken("one"), ScalarToken("two"))))
         val actual1 = FlowSequenceTestLexer(x1, "- ", 0, FlowIn)
         
         assertResult(expected1)(actual1)
         
         val x2 = readLine(exampleYamlPath, 1)
         
-        val expected2 = Right(FlowSequenceToken(List(ScalarToken("three"), ScalarToken("four"))))
+        val expected2 = Right(SequenceToken(List(ScalarToken("three"), ScalarToken("four"))))
         val actual2 = FlowSequenceTestLexer(x2, "- ", 0, FlowIn)
         
         assertResult(expected2)(actual2)
@@ -463,7 +463,7 @@ class FlowStylesLexerTest extends yams.helper.YamsSpec {
       
       "ex 7.14. Flow Sequence Entries" in {
         object FlowSequenceEntryTestLexer extends FlowStylesLexer {
-          def apply(x: String, n: Int, c: Context, s: String = ""): Either[YamlLoadError, FlowNodeToken] = {
+          def apply(x: String, n: Int, c: Context, s: String = ""): Either[YamlLoadError, NodeToken] = {
             parse(s ~> flowSeqEntry(n, c), x) match {
               case Success(y, _) => Right(y)
               case NoSuccess(m, next) => Left(YamlLoadError(next.pos, m))
@@ -507,14 +507,14 @@ class FlowStylesLexerTest extends yams.helper.YamsSpec {
 
         val x4 = readLines(exampleYamlPath, 5 to 6)
 
-        val expected4 = Right(FlowSequenceToken(List(ScalarToken("nested"))))
+        val expected4 = Right(SequenceToken(List(ScalarToken("nested"))))
         val actual4 = FlowSequenceEntryTestLexer(x4, 0, FlowIn, " text, ")
 
         assertResult(expected4)(actual4)
 
         val x5 = readLine(exampleYamlPath, 6)
 
-        val expected5 = Right(FlowEntryToken(ScalarToken("single"), ScalarToken("pair")))
+        val expected5 = Right(EntryToken(ScalarToken("single"), ScalarToken("pair")))
         val actual5 = FlowSequenceEntryTestLexer(x5, 0, FlowIn)
 
         assertResult(expected5)(actual5)
@@ -523,7 +523,7 @@ class FlowStylesLexerTest extends yams.helper.YamsSpec {
     
     "7.4.2. Flow Mappings" - {
       object FlowMappingTestLexer extends FlowStylesLexer {
-        def apply(x: String, n: Int, c: Context, s: String = ""): Either[YamlLoadError, FlowNodeToken] = {
+        def apply(x: String, n: Int, c: Context, s: String = ""): Either[YamlLoadError, NodeToken] = {
           parse(s ~> flowMapping(n, c), x) match {
             case Success(y, _) => Right(y)
             case NoSuccess(m, next) => Left(YamlLoadError(next.pos, m))
@@ -541,14 +541,14 @@ class FlowStylesLexerTest extends yams.helper.YamsSpec {
         
         val x1 = readLine(exampleYamlPath, 0)
         
-        val expected1 = Right(FlowMappingToken(List(FlowEntryToken(ScalarToken("one"), ScalarToken("two")), FlowEntryToken(ScalarToken("three"), ScalarToken("four")))))
+        val expected1 = Right(MappingToken(List(EntryToken(ScalarToken("one"), ScalarToken("two")), EntryToken(ScalarToken("three"), ScalarToken("four")))))
         val actual1 = FlowMappingTestLexer(x1, 0, FlowIn, "- ")
         
         assertResult(expected1)(actual1)
 
         val x2 = readLine(exampleYamlPath, 1)
 
-        val expected2 = Right(FlowMappingToken(List(FlowEntryToken(ScalarToken("five"), ScalarToken("six")), FlowEntryToken(ScalarToken("seven"), ScalarToken("eight")))))
+        val expected2 = Right(MappingToken(List(EntryToken(ScalarToken("five"), ScalarToken("six")), EntryToken(ScalarToken("seven"), ScalarToken("eight")))))
         val actual2 = FlowMappingTestLexer(x2, 0, FlowIn, "- ")
 
         assertResult(expected2)(actual2)
@@ -556,7 +556,7 @@ class FlowStylesLexerTest extends yams.helper.YamsSpec {
       
       "ex 7.16. Flow Mapping Entries" in {
         object FlowMapEntryTestLexer extends FlowStylesLexer {
-          def apply(x: String, n: Int, c: Context): Either[YamlLoadError, FlowNodeToken] = {
+          def apply(x: String, n: Int, c: Context): Either[YamlLoadError, NodeToken] = {
             parse(flowMapEntry(n, c), x) match {
               case NoSuccess(m, next) => Left(YamlLoadError(next.pos, m))
               case Success(y, _) => Right(y)
@@ -576,21 +576,21 @@ class FlowStylesLexerTest extends yams.helper.YamsSpec {
 
         val x1 = readLine(exampleYamlPath, 1)
 
-        val expected1 = Right(FlowEntryToken(ScalarToken("explicit"), ScalarToken("entry")))
+        val expected1 = Right(EntryToken(ScalarToken("explicit"), ScalarToken("entry")))
         val actual1 = FlowMapEntryTestLexer(x1, 0, FlowIn)
 
         assertResult(expected1)(actual1)
 
         val x2 = readLine(exampleYamlPath, 2)
 
-        val expected2 = Right(FlowEntryToken(ScalarToken("implicit"), ScalarToken("entry")))
+        val expected2 = Right(EntryToken(ScalarToken("implicit"), ScalarToken("entry")))
         val actual2 = FlowMapEntryTestLexer(x2, 0, FlowIn)
 
         assertResult(expected2)(actual2)
 
         val x3 = readLine(exampleYamlPath, 3)
 
-        val expected3 = Right(FlowEntryToken(EmptyNodeToken(), EmptyNodeToken()))
+        val expected3 = Right(EntryToken(EmptyNodeToken(), EmptyNodeToken()))
         val actual3 = FlowMapEntryTestLexer(x3, 0, FlowIn)
 
         assertResult(expected3)(actual3)
@@ -598,7 +598,7 @@ class FlowStylesLexerTest extends yams.helper.YamsSpec {
       
       "ex 7.17. Flow Mapping Separate Values" in {
         object FlowMapImplicitEntryTextLexer extends FlowStylesLexer {
-          def apply(x: String, n: Int, c: Context): Either[YamlLoadError, FlowEntryToken] = {
+          def apply(x: String, n: Int, c: Context): Either[YamlLoadError, EntryToken] = {
             parse(flowMapImplicitEntry(n, c), x) match {
               case NoSuccess(m, next) => Left(YamlLoadError(next.pos, m))
               case Success(y, _) => Right(y)
@@ -619,28 +619,28 @@ class FlowStylesLexerTest extends yams.helper.YamsSpec {
         
         val x1 = readLine(exampleYamlPath, 1)
 
-        val expected1 = Right(FlowEntryToken(ScalarToken("unquoted"), ScalarToken("separate", DoubleQuoted)))
+        val expected1 = Right(EntryToken(ScalarToken("unquoted"), ScalarToken("separate", DoubleQuoted)))
         val actual1 = FlowMapImplicitEntryTextLexer(x1, 0, FlowIn)
         
         assertResult(expected1)(actual1)
         
         val x2 = readLine(exampleYamlPath, 2)
         
-        val expected2 = Right(FlowEntryToken(ScalarToken("http://foo.com"), EmptyNodeToken()))
+        val expected2 = Right(EntryToken(ScalarToken("http://foo.com"), EmptyNodeToken()))
         val actual2 = FlowMapImplicitEntryTextLexer(x2, 0, FlowIn)
         
         assertResult(expected2)(actual2)
         
         val x3 = readLine(exampleYamlPath, 3)
         
-        val expected3 = Right(FlowEntryToken(ScalarToken("omitted value"), EmptyNodeToken()))
+        val expected3 = Right(EntryToken(ScalarToken("omitted value"), EmptyNodeToken()))
         val actual3 = FlowMapImplicitEntryTextLexer(x3, 0, FlowIn)
         
         assertResult(expected3)(actual3)
         
         val x4 = readLine(exampleYamlPath, 4)
         
-        val expected4 = Right(FlowEntryToken(EmptyNodeToken(), ScalarToken("omitted key")))
+        val expected4 = Right(EntryToken(EmptyNodeToken(), ScalarToken("omitted key")))
         val actual4 = FlowMapImplicitEntryTextLexer(x4, 0, FlowIn)
         
         assertResult(expected4)(actual4)
@@ -648,7 +648,7 @@ class FlowStylesLexerTest extends yams.helper.YamsSpec {
       
       "ex 7.18. Flow Mapping Adjacent Values" in {
         object FlowMapJsonKeyEntryTextLexer extends FlowStylesLexer {
-          def apply(x: String, n: Int, c: Context): Either[YamlLoadError, FlowEntryToken] = {
+          def apply(x: String, n: Int, c: Context): Either[YamlLoadError, EntryToken] = {
             parse(flowMapImplicitEntry(n, c), x) match {
               case NoSuccess(m, next) => Left(YamlLoadError(next.pos, m))
               case Success(y, _) => Right(y)
@@ -668,28 +668,28 @@ class FlowStylesLexerTest extends yams.helper.YamsSpec {
         
         val x1 = readLine(exampleYamlPath, 1)
         
-        val expected1 = Right(FlowEntryToken(ScalarToken("adjacent", DoubleQuoted), ScalarToken("value")))
+        val expected1 = Right(EntryToken(ScalarToken("adjacent", DoubleQuoted), ScalarToken("value")))
         val actual1 = FlowMapJsonKeyEntryTextLexer(x1, 0, FlowIn)
         
         assertResult(expected1)(actual1)
         
         val x2 = readLine(exampleYamlPath, 2)
         
-        val expected2 = Right(FlowEntryToken(ScalarToken("readable", DoubleQuoted), ScalarToken("value")))
+        val expected2 = Right(EntryToken(ScalarToken("readable", DoubleQuoted), ScalarToken("value")))
         val actual2 = FlowMapJsonKeyEntryTextLexer(x2, 0, FlowIn)
         
         assertResult(expected2)(actual2)
         
         val x3 = readLine(exampleYamlPath, 3)
         
-        val expected3 = Right(FlowEntryToken(ScalarToken("empty", DoubleQuoted), EmptyNodeToken()))
+        val expected3 = Right(EntryToken(ScalarToken("empty", DoubleQuoted), EmptyNodeToken()))
         val actual3 = FlowMapJsonKeyEntryTextLexer(x3, 0, FlowIn)
         
         assertResult(expected3)(actual3)
       }
       
       object FlowPairTextLexer extends FlowStylesLexer {
-        def apply(x: String, n: Int, c: Context): Either[YamlLoadError, FlowEntryToken] = {
+        def apply(x: String, n: Int, c: Context): Either[YamlLoadError, EntryToken] = {
           parse(flowPair(n, c), x) match {
             case NoSuccess(m, next) => Left(YamlLoadError(next.pos, m))
             case Success(y, _) => Right(y)
@@ -708,7 +708,7 @@ class FlowStylesLexerTest extends yams.helper.YamsSpec {
         
         val x = readLine(exampleYamlPath, 1)
         
-        val expected = Right(FlowEntryToken(ScalarToken("foo"), ScalarToken("bar")))
+        val expected = Right(EntryToken(ScalarToken("foo"), ScalarToken("bar")))
         val actual = FlowPairTextLexer(x, 0, FlowIn)
         
         assertResult(expected)(actual)
@@ -726,14 +726,14 @@ class FlowStylesLexerTest extends yams.helper.YamsSpec {
         
         val x = readLines(exampleYamlPath, 1 to 2)
         
-        val expected = Right(FlowEntryToken(ScalarToken("foo bar"), ScalarToken("baz")))
+        val expected = Right(EntryToken(ScalarToken("foo bar"), ScalarToken("baz")))
         val actual = FlowPairTextLexer(x, 0, FlowIn)
         
         assertResult(expected)(actual)
       }
       
       object FlowPairEntryTestLexer extends FlowStylesLexer {
-        def apply(x: String, s: String, n: Int, c: Context): Either[YamlLoadError, FlowEntryToken] = {
+        def apply(x: String, s: String, n: Int, c: Context): Either[YamlLoadError, EntryToken] = {
           parse(s ~> flowPairEntry(n, c), x) match {
             case NoSuccess(m, next) => Left(YamlLoadError(next.pos, m))
             case Success(y, _) => Right(y)
@@ -752,21 +752,21 @@ class FlowStylesLexerTest extends yams.helper.YamsSpec {
         
         val x1 = readLine(exampleYamlPath, 0)
         
-        val expected1 = Right(FlowEntryToken(ScalarToken("YAML"), ScalarToken("separate")))
+        val expected1 = Right(EntryToken(ScalarToken("YAML"), ScalarToken("separate")))
         val actual1 = FlowPairEntryTestLexer(x1, "- [ ", 0, FlowIn)
         
         assertResult(expected1)(actual1)
         
         val x2 = readLine(exampleYamlPath, 1)
         
-        val expected2 = Right(FlowEntryToken(EmptyNodeToken(), ScalarToken("empty key entry")))
+        val expected2 = Right(EntryToken(EmptyNodeToken(), ScalarToken("empty key entry")))
         val actual2 = FlowPairEntryTestLexer(x2, "- [ ", 0, FlowIn)
         
         assertResult(expected2)(actual2)
         
         val x3 = readLine(exampleYamlPath, 2)
         
-        val expected3 = Right(FlowEntryToken(FlowMappingToken(List(FlowEntryToken(ScalarToken("JSON"), ScalarToken("like")))), ScalarToken("adjacent")))
+        val expected3 = Right(EntryToken(MappingToken(List(EntryToken(ScalarToken("JSON"), ScalarToken("like")))), ScalarToken("adjacent")))
         val actual3 = FlowPairEntryTestLexer(x3, "- [ ", 0, FlowIn)
         
         assertResult(expected3)(actual3)
@@ -801,7 +801,7 @@ class FlowStylesLexerTest extends yams.helper.YamsSpec {
   "7.5. Flow Nodes" - {
     "ex 7.23. Flow Content" in {
       object FlowContentTestParser extends FlowStylesLexer {
-        def apply(x: String, n: Int, c: Context): Either[YamlLoadError, FlowNodeToken] = {
+        def apply(x: String, n: Int, c: Context): Either[YamlLoadError, NodeToken] = {
           parse("- " ~> flowContent(n, c), x) match {
             case NoSuccess(m, next) => Left(YamlLoadError(next.pos, m))
             case Success(y, _) => Right(y)
@@ -821,14 +821,14 @@ class FlowStylesLexerTest extends yams.helper.YamsSpec {
       
       val x1 = readLine(exampleYamlPath, 0)
 
-      val expected1 = Right(FlowSequenceToken(List(ScalarToken("a"), ScalarToken("b"))))
+      val expected1 = Right(SequenceToken(List(ScalarToken("a"), ScalarToken("b"))))
       val actual1 = FlowContentTestParser(x1, 0, FlowIn)
 
       assertResult(expected1)(actual1)
 
       val x2 = readLine(exampleYamlPath, 1)
 
-      val expected2 = Right(FlowMappingToken(List(FlowEntryToken(ScalarToken("a"), ScalarToken("b")))))
+      val expected2 = Right(MappingToken(List(EntryToken(ScalarToken("a"), ScalarToken("b")))))
       val actual2 = FlowContentTestParser(x2, 0, FlowIn)
 
       assertResult(expected2)(actual2)
@@ -857,7 +857,7 @@ class FlowStylesLexerTest extends yams.helper.YamsSpec {
     
     "ex 7.24. Flow Nodes" in {
       object FlowNodeTestParser extends FlowStylesLexer {
-        def apply(x: String, n: Int, c: Context): Either[YamlLoadError, FlowNodeToken] = {
+        def apply(x: String, n: Int, c: Context): Either[YamlLoadError, NodeToken] = {
           parse("- " ~> flowNode(n, c), x) match {
             case NoSuccess(m, next) => Left(YamlLoadError(next.pos, m))
             case Success(y, _) => Right(y)

@@ -353,7 +353,7 @@ trait BlockStylesLexer extends scala.util.parsing.combinator.RegexParsers
       case None ~ None => ""
     }
   
-  import tokens.{FlowEntryToken, FlowNodeToken, FlowSequenceToken, FlowMappingToken}
+  import tokens.{EntryToken, NodeToken, SequenceToken, MappingToken}
 
   /** A block sequence is simply a series of nodes, each denoted by a leading “-” indicator. The “-”
     * indicator must be separated from the node by white space. This allows “-” to be used as the first
@@ -370,8 +370,8 @@ trait BlockStylesLexer extends scala.util.parsing.combinator.RegexParsers
     * @return [[Parser]] for lexing '''l+block-sequence(n)'''
     * @see [[http://yaml.org/spec/1.2/spec.html#l+block-sequence(n)]]
     */
-  def blockSequence(n: Int): Parser[FlowSequenceToken] = {
-    def blockSequenceEntries: Parser[FlowNodeToken] = Parser { input =>
+  def blockSequence(n: Int): Parser[SequenceToken] = {
+    def blockSequenceEntries: Parser[NodeToken] = Parser { input =>
       parse(indentAutoDetection, input) match {
         case NoSuccess(_, _) => Failure("l+block-sequence(n) expected, but not found", input)
         case Success(m, next) =>
@@ -382,10 +382,10 @@ trait BlockStylesLexer extends scala.util.parsing.combinator.RegexParsers
       }
     }
     
-    blockSequenceEntries.+ ^^ FlowSequenceToken
+    blockSequenceEntries.+ ^^ SequenceToken
   }
 
-  def blockSeqEntry(n: Int): Parser[FlowNodeToken] = "-" ~> blockIndented(n, BlockIn)
+  def blockSeqEntry(n: Int): Parser[NodeToken] = "-" ~> blockIndented(n, BlockIn)
 
   /** The entry node may be either completely empty, be a nested block node, or use a compact in-line
     * notation. The compact notation may be used when the entry is itself a nested block collection.
@@ -408,11 +408,11 @@ trait BlockStylesLexer extends scala.util.parsing.combinator.RegexParsers
     * @return [[Parser]] for lexing '''s-l+block-indented(n,c)'''
     * @see [[http://yaml.org/spec/1.2/spec.html#s-l+block-indented(n,c)]]
     */
-  def blockIndented(n: Int, c: Context): Parser[FlowNodeToken] = {
-    def compactSequence(n: Int): Parser[FlowSequenceToken] = 
-      blockSeqEntry(n) ~ (indent(n) ~> blockSeqEntry(n)).* ^^ { case a ~ b => FlowSequenceToken(a +: b) }
+  def blockIndented(n: Int, c: Context): Parser[NodeToken] = {
+    def compactSequence(n: Int): Parser[SequenceToken] =
+      blockSeqEntry(n) ~ (indent(n) ~> blockSeqEntry(n)).* ^^ { case a ~ b => SequenceToken(a +: b) }
     
-    def compactSeqOrMap: Parser[FlowNodeToken] = Parser { input => 
+    def compactSeqOrMap: Parser[NodeToken] = Parser { input =>
       parse(indentAutoDetection, input) match {
         case Success(m, next1) =>
           parse(compactSequence(n + m + 1) | compactMapping(n + m + 1), next1) match {
@@ -436,8 +436,8 @@ trait BlockStylesLexer extends scala.util.parsing.combinator.RegexParsers
     * @return [[Parser]] for lexing '''l+block-mapping(n)'''
     * @see [[http://yaml.org/spec/1.2/spec.html#l+block-mapping(n)]]
     */
-  def blockMapping(n: Int): Parser[FlowMappingToken] = {
-    def blockMappingEntries: Parser[FlowEntryToken] = Parser { input =>
+  def blockMapping(n: Int): Parser[MappingToken] = {
+    def blockMappingEntries: Parser[EntryToken] = Parser { input =>
       parse(indentAutoDetection, input) match {
         case NoSuccess(_, _) => Failure("l+block-mapping(n) expected, but not found", input)
         case Success(m, next1) => parse(blockMapEntry(n + m), next1) match {
@@ -447,7 +447,7 @@ trait BlockStylesLexer extends scala.util.parsing.combinator.RegexParsers
       }
     }
     
-    blockMappingEntries.+ ^^ FlowMappingToken
+    blockMappingEntries.+ ^^ MappingToken
   }
 
   /** If the “?” indicator is specified, the optional value node must be specified on a separate line,
@@ -469,16 +469,16 @@ trait BlockStylesLexer extends scala.util.parsing.combinator.RegexParsers
     * @return [[Parser]] for lexing '''ns-l-block-map-entry(n)'''
     * @see [[http://yaml.org/spec/1.2/spec.html#ns-l-block-map-entry(n)]]
     */
-  def blockMapEntry(n: Int): Parser[FlowEntryToken] = {
-    def blockMapExplicitEntry(n: Int): Parser[FlowEntryToken] = 
+  def blockMapEntry(n: Int): Parser[EntryToken] = {
+    def blockMapExplicitEntry(n: Int): Parser[EntryToken] =
       blockMapExplicitKey(n) ~ (blockMapExplicitValue(n) | emptyNode) ^^ {
-        case k ~ v => FlowEntryToken(k, v)
+        case k ~ v => EntryToken(k, v)
       }
 
-    def blockMapExplicitKey(n: Int): Parser[FlowNodeToken] =
+    def blockMapExplicitKey(n: Int): Parser[NodeToken] =
       "?" ~> blockIndented(n, BlockOut)
 
-    def blockMapExplicitValue(n: Int): Parser[FlowNodeToken] = Parser { input =>
+    def blockMapExplicitValue(n: Int): Parser[NodeToken] = Parser { input =>
       parse(indent(n) ~> ":" ~> blockIndented(n, BlockOut), input)
     }
 
@@ -514,16 +514,16 @@ trait BlockStylesLexer extends scala.util.parsing.combinator.RegexParsers
     * @return [[Parser]] for lexing '''c-l-block-map-implicit-value(n)'''
     * @see [[http://yaml.org/spec/1.2/spec.html#c-l-block-map-implicit-value(n)]]
     */
-  def blockMapImplicitEntry(n: Int): Parser[FlowEntryToken] = {
-    def blockMapImplicitKey: Parser[FlowNodeToken] = Parser { input =>
+  def blockMapImplicitEntry(n: Int): Parser[EntryToken] = {
+    def blockMapImplicitKey: Parser[NodeToken] = Parser { input =>
       parse(implicitKey(BlockKey, FlowJson) | implicitKey(BlockKey, FlowYaml), input)
     }
 
-    def blockMapImplicitValue(n: Int): Parser[FlowNodeToken] = Parser { input =>
+    def blockMapImplicitValue(n: Int): Parser[NodeToken] = Parser { input =>
       parse(":" ~> (blockNode(n, BlockOut) | (emptyNode <~ comments)), input)
     }
 
-    (blockMapImplicitKey | emptyNode) ~ blockMapImplicitValue(n) ^^ { case k ~ v => FlowEntryToken(k, v) }
+    (blockMapImplicitKey | emptyNode) ~ blockMapImplicitValue(n) ^^ { case k ~ v => EntryToken(k, v) }
   }
 
   /** A compact in-line notation is also available. This compact notation may be nested inside block
@@ -539,8 +539,8 @@ trait BlockStylesLexer extends scala.util.parsing.combinator.RegexParsers
     * @return [[Parser]] for lexing '''ns-l-compact-mapping(n)'''
     * @see [[http://yaml.org/spec/1.2/spec.html#ns-l-compact-mapping(n)]]
     */
-  def compactMapping(n: Int): Parser[FlowMappingToken] = 
-    blockMapEntry(n) ~ (indent(n) ~> blockMapEntry(n)).* ^^ { case a ~ b => FlowMappingToken(a +: b) }
+  def compactMapping(n: Int): Parser[MappingToken] =
+    blockMapEntry(n) ~ (indent(n) ~> blockMapEntry(n)).* ^^ { case a ~ b => MappingToken(a +: b) }
 
   /** YAML allows flow nodes to be embedded inside block collections (but not vice-versa). Flow nodes
     * must be indented by at least one more space than the parent block collection. Note that flow nodes
@@ -583,18 +583,18 @@ trait BlockStylesLexer extends scala.util.parsing.combinator.RegexParsers
     * @param c [[BlockOut]], [[BlockIn]], [[FlowOut]], [[FlowIn]], [[BlockKey]] or [[FlowKey]]
     * @return [[Parser]] for lexing '''s-l+block-node(n,c)'''
     */
-  private[lexers] def blockNode(n: Int, c: Context): Parser[FlowNodeToken] = {
-    def flowInBlock(n: Int): Parser[FlowNodeToken] =
+  private[lexers] def blockNode(n: Int, c: Context): Parser[NodeToken] = {
+    def flowInBlock(n: Int): Parser[NodeToken] =
       separate(n + 1, FlowOut) ~> flowNode(n + 1, FlowOut) <~ comments
 
-    def blockInBlock(n: Int, c: Context): Parser[FlowNodeToken] = blockScalar(n, c) | blockCollection(n, c)
+    def blockInBlock(n: Int, c: Context): Parser[NodeToken] = blockScalar(n, c) | blockCollection(n, c)
 
     def blockScalar(n: Int, c: yams.Context): Parser[ScalarToken] =
       separate(n + 1, c) ~> 
         (nodeProperties(n + 1, c) <~ separate(n + 1, c)).? ~
         (literal(n) | folded(n)) ^^ { case property ~ scalar => scalar + property }
 
-    def blockCollection(n: Int, c: Context): Parser[FlowNodeToken] =
+    def blockCollection(n: Int, c: Context): Parser[NodeToken] =
       (separate(n + 1, c) ~> nodeProperties(n + 1, c)).? ~
         (comments ~> (blockSequence(seqSpaces(n, c)) | blockMapping(n))) ^^ { 
         case property ~ node => node + property
